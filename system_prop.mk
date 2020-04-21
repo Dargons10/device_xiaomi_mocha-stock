@@ -18,8 +18,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
 	persist.tegra.compositor=surfaceflinger \
     ro.zygote.disable_gl_preload=true \
     ro.sf.disable_triple_buffer=true \
-	debug.sf.disable_backpressure=0 \
-	ro.input.noresample=1 
+	persist.sys.ui.hw=true \
+    debug.sf.disable_backpressure=1 \
+    debug.sf.latch_unsignaled=1
 	
 # Input
 PRODUCT_PROPERTY_OVERRIDES += \
