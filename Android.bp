@@ -1,3 +1,5 @@
-subdirs = [   
+subdirs = [
+    "sensors",    
     "hidl",
- ]
+    "tinyalsa"
+]

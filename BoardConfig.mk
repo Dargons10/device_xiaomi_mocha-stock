@@ -18,6 +18,11 @@
 # Path
 LOCAL_PATH := device/xiaomi/mocha
 
+# Audio
+BOARD_USES_GENERIC_AUDIO := false
+BOARD_USES_ALSA_AUDIO := true
+BOARD_USES_TINYHAL_AUDIO := true
+
 # Architecture
 TARGET_CPU_ABI := armeabi-v7a
 TARGET_CPU_ABI2 := armeabi
@@ -27,18 +32,13 @@ TARGET_CPU_VARIANT := cortex-a15
 
 TARGET_NOT_USE_GZIP_RECOVERY_RAMDISK := true
 
-# Audio
-BOARD_USES_GENERIC_AUDIO := false
-BOARD_USES_ALSA_AUDIO := true
-BOARD_USES_TINYHAL_AUDIO := true
+# Binder API
+TARGET_USES_64_BIT_BINDER := true
 
 # Bluetooth
 BOARD_HAVE_BLUETOOTH := true
 BOARD_HAVE_BLUETOOTH_BCM := true
-BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR ?= device/xiaomi/mocha/bluetooth
-
-# Binder API
-TARGET_USES_64_BIT_BINDER := true
+BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := device/xiaomi/mocha/bluetooth
 
 # Board
 TARGET_BOARD_PLATFORM := tegra
@@ -70,6 +70,7 @@ TARGET_USES_MKE2FS := true
 # Graphics
 USE_OPENGL_RENDERER := true
 BOARD_DISABLE_TRIPLE_BUFFERED_DISPLAY_SURFACES := true
+NUM_FRAMEBUFFER_SURFACE_BUFFERS := 2
 
 # HIDL Manifest
 DEVICE_MANIFEST_FILE := $(LOCAL_PATH)/manifest.xml
@@ -129,17 +130,17 @@ TARGET_POWERHAL_VARIANT := tegra
 
 # Recovery
 TARGET_RECOVERY_DEVICE_DIRS += device/xiaomi/mocha
-TARGET_RECOVERY_FSTAB := device/xiaomi/mocha/rootdir/etc/fstab.tn8
+TARGET_RECOVERY_FSTAB := device/xiaomi/mocha/initfiles/fstab.tn8
 BOARD_NO_SECURE_DISCARD := true
 
-#RenderScript
+# RenderScript
 OVERRIDE_RS_DRIVER := libnvRSDriver.so
 BOARD_OVERRIDE_RS_CPU_VARIANT_32 := cortex-a15
 
-# Sepolicy
-BOARD_SEPOLICY_DIRS := \
-                       #device/xiaomi/mocha/sepolicy/common \
-                       #device/xiaomi/mocha/sepolicy/lineage-common \
+# SELinux
+SELINUX_IGNORE_NEVERALLOWS := true
+BOARD_SEPOLICY_DIRS += device/xiaomi/mocha/sepolicy/common \
+                       device/xiaomi/mocha/sepolicy/lineage-common \
                        device/xiaomi/mocha/sepolicy/mocha
 # SHIMS
 TARGET_LD_SHIM_LIBS := \
@@ -148,9 +149,6 @@ TARGET_LD_SHIM_LIBS := \
 
 # ThermalHAL
 TARGET_THERMALHAL_VARIANT := tegra
-
-# workaround for devices that uses old GPU blobs
-BOARD_EGL_WORKAROUND_BUG_10194508 := true
 
 # Wifi related defines
 BOARD_WPA_SUPPLICANT_DRIVER      := NL80211
@@ -165,4 +163,8 @@ WIFI_DRIVER_FW_PATH_PARAM        := "/sys/module/bcmdhd/parameters/firmware_path
 #WIFI_DRIVER_MODULE_ARG           := "iface_name=wlan0"
 #WIFI_DRIVER_MODULE_NAME          := "bcmdhd"
 
-
+# workaround for devices that uses old GPU blobs
+BOARD_EGL_WORKAROUND_BUG_10194508 := true
+                       
+# Zygote whitelist extra paths
+ZYGOTE_WHITELIST_PATH_EXTRA := \"/dev/nvhost-ctrl\",\"/dev/nvmap\",
