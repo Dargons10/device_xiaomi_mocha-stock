@@ -15,6 +15,8 @@ on init
     export LD_PRELOAD "libshim_zw.so"
 
     mkdir /mnt/media_rw/sdcard1 0700 media_rw media_rw
+    mkdir /storage/sdcard1 0700 root sdcard_r
+    
 
     # Support legacy paths
     symlink /sdcard /mnt/sdcard
@@ -72,19 +74,18 @@ on boot
     chown system system /sys/class/backlight/lcd-backlight/brightness
     
 # charger
-    chown system system /sys/devices/platform/tegra12-i2c.3/i2c-1/1-006b/disabled_by_user
+    chown system system /sys/devices/platform/tegra12-i2c.0/i2c-1/1-006b/disabled_by_user
 
-# didim
-    chown system system /sys/devices/platform/host1x/tegradc.0/smartdimmer/enable
-    chown system system /sys/devices/platform/host1x/tegradc.0/smartdimmer/aggressiveness
-    chown system system /sys/devices/platform/host1x/tegradc.0/smartdimmer/sd_window
-    chown system system /sys/devices/platform/host1x/tegradc.0/smartdimmer/sd_window_enable
+#dt2w
+    chown system system /sys/devices/platform/tegra12-i2c.0/i2c-3/3-004a/wakeup_mode
+    chown system system /sys/devices/platform/tegra12-i2c.0/i2c-3/3-0020/input/input0/wake_gesture
+    chown system system /sys/devices/platform/tegra12-i2c.0/i2c-3/3-0020/input/input3/wake_gesture
 
 ## cmhw permissions
 # key disabler
-    chown system system /sys/devices/platform/tegra12-i2c.3/i2c-3/3-004a/enable_keys
-    chown system system /sys/devices/platform/tegra12-i2c.3/i2c-3/3-0020/input/input0/0dbutton
-    chown system system /sys/devices/platform/tegra12-i2c.3/i2c-3/3-0020/input/input3/0dbutton
+    chown system system /sys/devices/platform/tegra12-i2c.0/i2c-3/3-004a/enable_keys
+    chown system system /sys/devices/platform/tegra12-i2c.0/i2c-3/3-0020/input/input0/0dbutton
+    chown system system /sys/devices/platform/tegra12-i2c.0/i2c-3/3-0020/input/input3/0dbutton
 
 # vibrator intensity
     chown system system /sys/vibrator/pwmvalue
