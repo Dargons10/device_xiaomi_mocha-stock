@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include <signal.h>
 #include <string.h>
+#include <limits.h>
 
 #define ID_RIFF 0x46464952
 #define ID_WAVE 0x45564157
@@ -62,11 +63,13 @@ int prinfo = 1;
 unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
                             unsigned int channels, unsigned int rate,
                             enum pcm_format format, unsigned int period_size,
-                            unsigned int period_count);
+                            unsigned int period_count, unsigned int capture_time);
 
 void sigint_handler(int sig)
 {
-    capturing = 0;
+    if (sig == SIGINT){
+        capturing = 0;
+    }
 }
 
 int main(int argc, char **argv)
@@ -76,17 +79,18 @@ int main(int argc, char **argv)
     unsigned int card = 0;
     unsigned int device = 0;
     unsigned int channels = 2;
-    unsigned int rate = 44100;
+    unsigned int rate = 48000;
     unsigned int bits = 16;
     unsigned int frames;
     unsigned int period_size = 1024;
     unsigned int period_count = 4;
+    unsigned int capture_time = UINT_MAX;
     enum pcm_format format;
     int no_header = 0;
 
     if (argc < 2) {
         fprintf(stderr, "Usage: %s {file.wav | --} [-D card] [-d device] [-c channels] "
-                "[-r rate] [-b bits] [-p period_size] [-n n_periods]\n\n"
+                "[-r rate] [-b bits] [-p period_size] [-n n_periods] [-t time_in_seconds]\n\n"
                 "Use -- for filename to send raw PCM to stdout\n", argv[0]);
         return 1;
     }
@@ -134,6 +138,10 @@ int main(int argc, char **argv)
             argv++;
             if (*argv)
                 period_count = atoi(*argv);
+        } else if (strcmp(*argv, "-t") == 0) {
+            argv++;
+            if (*argv)
+                capture_time = atoi(*argv);
         }
         if (*argv)
             argv++;
@@ -159,7 +167,8 @@ int main(int argc, char **argv)
         format = PCM_FORMAT_S16_LE;
         break;
     default:
-        fprintf(stderr, "%d bits is not supported.\n", bits);
+        fprintf(stderr, "%u bits is not supported.\n", bits);
+        fclose(file);
         return 1;
     }
 
@@ -177,9 +186,9 @@ int main(int argc, char **argv)
     signal(SIGINT, sigint_handler);
     frames = capture_sample(file, card, device, header.num_channels,
                             header.sample_rate, format,
-                            period_size, period_count);
+                            period_size, period_count, capture_time);
     if (prinfo) {
-        printf("Captured %d frames\n", frames);
+        printf("Captured %u frames\n", frames);
     }
 
     /* write header now all information is known */
@@ -198,14 +207,17 @@ int main(int argc, char **argv)
 unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
                             unsigned int channels, unsigned int rate,
                             enum pcm_format format, unsigned int period_size,
-                            unsigned int period_count)
+                            unsigned int period_count, unsigned int capture_time)
 {
     struct pcm_config config;
     struct pcm *pcm;
     char *buffer;
     unsigned int size;
-    unsigned int bytes_read = 0;
+    unsigned int frames_read;
+    unsigned int total_frames_read;
+    unsigned int bytes_per_frame;
 
+    memset(&config, 0, sizeof(config));
     config.channels = channels;
     config.rate = rate;
     config.period_size = period_size;
@@ -225,8 +237,7 @@ unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
     size = pcm_frames_to_bytes(pcm, pcm_get_buffer_size(pcm));
     buffer = malloc(size);
     if (!buffer) {
-        fprintf(stderr, "Unable to allocate %d bytes\n", size);
-        free(buffer);
+        fprintf(stderr, "Unable to allocate %u bytes\n", size);
         pcm_close(pcm);
         return 0;
     }
@@ -236,16 +247,23 @@ unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
            pcm_format_to_bits(format));
     }
 
-    while (capturing && !pcm_read(pcm, buffer, size)) {
-        if (fwrite(buffer, 1, size, file) != size) {
+    bytes_per_frame = pcm_frames_to_bytes(pcm, 1);
+    total_frames_read = 0;
+    frames_read = 0;
+    while (capturing) {
+        frames_read = pcm_readi(pcm, buffer, pcm_get_buffer_size(pcm));
+        total_frames_read += frames_read;
+        if ((total_frames_read / rate) >= capture_time) {
+            capturing = 0;
+        }
+        if (fwrite(buffer, bytes_per_frame, frames_read, file) != frames_read) {
             fprintf(stderr,"Error capturing sample\n");
             break;
         }
-        bytes_read += size;
     }
 
     free(buffer);
     pcm_close(pcm);
-    return pcm_bytes_to_frames(pcm, bytes_read);
+    return total_frames_read;
 }
 
