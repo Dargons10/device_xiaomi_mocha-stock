@@ -48,6 +48,10 @@ on init
     chown system system /sys/bus/i2c/devices/1-0040/iio_device/running_mode
     export LD_SHIM_LIBS "/system/vendor/lib/libnvomxadaptor.so|libmocha_omx.so:/system/lib/hw/camera.vendor.tegra.so|libmocha_camera.so:/system/lib/hw/camera.vendor.tegra.so|libmocha_libc.so"
 
+on fs
+    mount_all /fstab.tn8
+    swapon_all /fstab.tn8
+
 on boot
     #change vm memory parameter
     write /proc/sys/vm/lowmem_reserve_ratio "128 128"
