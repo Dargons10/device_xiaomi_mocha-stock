@@ -72,7 +72,7 @@ LOCAL_SRC_FILES := \
     bionic/pthread_cond.cpp
 LOCAL_SHARED_LIBRARIES := libc
 LOCAL_MODULE := libmocha_libc
-LOCAL_CLANG := false
+LOCAL_CLANG := true
 LOCAL_CXX_STL := none
 LOCAL_SANITIZE := never
 LOCAL_MODULE_TAGS := optional
