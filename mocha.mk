@@ -152,6 +152,11 @@ PRODUCT_PACKAGES += \
     power.tn8.rc \
     ueventd.tn8.rc
 
+# Seccomp
+PRODUCT_COPY_FILES += \
+    device/xiaomi/mocha/seccomp/mediacodec.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
+    device/xiaomi/mocha/seccomp/mediaextractor.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediaextractor.policy
+
 # Sensors
 PRODUCT_PACKAGES += \
     sensors.tegra
@@ -160,7 +165,7 @@ PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/sensors/etc/hals.conf:system/etc/sensors/hals.conf
 
 # System Properties
--include $(LOCAL_PATH)/system_prop.mk
+-include device/xiaomi/mocha/system_prop.mk
 
 # Wifi
 PRODUCT_COPY_FILES += \
