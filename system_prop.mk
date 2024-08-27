@@ -22,6 +22,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
 	persist.tegra.nvmmlite = 1
 
+# OMX
+PRODUCT_PROPERTY_OVERRIDES += \
+    persist.media.treble_omx=false \
+    media.stagefright.less-secure=true \
+	media.stagefright.legacyencoder=true
+
 # pbc 
 PRODUCT_PROPERTY_OVERRIDES += \
 	pbc.enabled=0 \
