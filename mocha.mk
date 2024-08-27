@@ -29,6 +29,9 @@ PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/audio/audio.mocha.xml:system/etc/audio.mocha.xml
 
 PRODUCT_PACKAGES += \
+    android.hardware.audio@2.0-impl \
+    android.hardware.audio@2.0-service \
+    android.hardware.audio.effect@2.0-impl \
     audio.a2dp.default \
     audio.usb.default \
     audio.r_submix.default \
@@ -50,6 +53,8 @@ PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/bluetooth/bt_vendor.conf:system/etc/bluetooth/bt_vendor.conf
 
 PRODUCT_PACKAGES += \
+    android.hardware.bluetooth@1.0-impl \
+    android.hardware.bluetooth@1.0-service \
     libbt-vendor
 
 # Camera
@@ -71,21 +76,82 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.software.sip.xml:system/etc/permissions/android.software.sip.xml \
     frameworks/native/data/etc/android.software.sip.voip.xml:system/etc/permissions/android.software.sip.voip.xml
 
+# Configstore HAL
+PRODUCT_PACKAGES += \
+    android.hardware.configstore@1.0-impl \
+    android.hardware.configstore@1.0-service
+
+# Configstore HAL
+PRODUCT_PACKAGES += \
+    android.hardware.configstore@1.0-impl \
+    android.hardware.configstore@1.0-service
+
+# Filesystem management tools
+PRODUCT_PACKAGES += \
+    setup_fs
+
 # FM
 PRODUCT_PACKAGES += \
     FMRadio \
     brcm-uim-sysfs \
     libfmjni
 
-# Filesystem management tools
+# Grapchis
 PRODUCT_PACKAGES += \
-    setup_fs
+   android.hardware.graphics.allocator@2.0-impl \
+   android.hardware.graphics.allocator@2.0-service \
+   android.hardware.graphics.mapper@2.0-impl \
+   android.hardware.renderscript@1.0-impl \
+   libshim_wvm
+
+# Health HAL
+PRODUCT_PACKAGES += \
+    android.hardware.health@1.0-impl \
+    android.hardware.health@1.0-service
+
+# HIDL (needed for shield 8.0 based hidl hals)
+PRODUCT_PACKAGES += \
+     android.hidl.base@1.0 \
+     android.hidl.base@1.0_system \
+     android.hidl.manager@1.0 \
+     android.hidl.manager@1.0-java
+
+# Keymaster
+PRODUCT_PACKAGES += \
+    android.hardware.keymaster@3.0-impl \
+    android.hardware.keymaster@3.0-service
 
 # keylayout
 PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/keylayout/tegra-kbc.kl:system/usr/keylayout/tegra-kbc.kl \
     device/xiaomi/mocha/keylayout/gpio-keys.kl:system/usr/keylayout/gpio-keys.kl \
     device/xiaomi/mocha/keylayout/Vendor_0955_Product_7210.kl:system/usr/keylayout/Vendor_0955_Product_7210.kl
+
+# Manifest HIDL
+PRODUCT_COPY_FILES += \
+    device/xiaomi/mocha/manifest.xml:system/vendor/manifest.xml
+
+# Media config
+PRODUCT_COPY_FILES += \
+    frameworks/av/media/libstagefright/data/media_codecs_google_audio.xml:system/etc/media_codecs_google_audio.xml \
+    frameworks/av/media/libstagefright/data/media_codecs_google_video.xml:system/etc/media_codecs_google_video.xml \
+    device/xiaomi/mocha/media/media_codecs.xml:system/etc/media_codecs.xml \
+    device/xiaomi/mocha/media/media_profiles.xml:system/etc/media_profiles.xml \
+    device/xiaomi/mocha/media/media_codecs_performance.xml:system/etc/media_codecs_performance.xml
+PRODUCT_PACKAGES += \
+    android.hardware.media.omx@1.0-impl \
+    android.hardware.media.omx@1.0-service
+
+# Memtrack
+PRODUCT_PACKAGES += \
+    android.hardware.memtrack@1.0-impl \
+    android.hardware.memtrack@1.0-service 
+
+# NVIDIA
+PRODUCT_COPY_FILES += \
+    device/xiaomi/mocha/permissions/com.nvidia.blakemanager.xml:system/etc/permissions/com.nvidia.blakemanager.xml \
+    device/xiaomi/mocha/permissions/com.nvidia.feature.xml:system/etc/permissions/com.nvidia.feature.xml \
+    device/xiaomi/mocha/permissions/com.nvidia.nvsi.xml:system/etc/permissions/com.nvidia.nvsi.xml
 
 # Overlay
 DEVICE_PACKAGE_OVERLAYS += \
@@ -114,22 +180,12 @@ PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/android.hardware.sensor.stepcounter.xml:system/etc/permissions/android.hardware.sensor.stepcounter.xml \
     frameworks/native/data/etc/android.hardware.sensor.stepdetector.xml:system/etc/permissions/android.hardware.sensor.stepdetector.xml
 
-# Media config
-PRODUCT_COPY_FILES += \
-    frameworks/av/media/libstagefright/data/media_codecs_google_audio.xml:system/etc/media_codecs_google_audio.xml \
-    frameworks/av/media/libstagefright/data/media_codecs_google_video.xml:system/etc/media_codecs_google_video.xml \
-    device/xiaomi/mocha/media/media_codecs.xml:system/etc/media_codecs.xml \
-    device/xiaomi/mocha/media/media_profiles.xml:system/etc/media_profiles.xml \
-    device/xiaomi/mocha/media/media_codecs_performance.xml:system/etc/media_codecs_performance.xml
-
-# NVIDIA
-PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/permissions/com.nvidia.blakemanager.xml:system/etc/permissions/com.nvidia.blakemanager.xml \
-    device/xiaomi/mocha/permissions/com.nvidia.feature.xml:system/etc/permissions/com.nvidia.feature.xml \
-    device/xiaomi/mocha/permissions/com.nvidia.nvsi.xml:system/etc/permissions/com.nvidia.nvsi.xml
 
 # Power
-PRODUCT_PACKAGES += power.tegra
+PRODUCT_PACKAGES += \
+    android.hardware.lineage@1.0-impl
+    android.hardware.lineage@1.0-service
+    power.tegra
 
 # Product
 PRODUCT_CHARACTERISTICS := tablet
@@ -159,6 +215,8 @@ PRODUCT_COPY_FILES += \
 
 # Sensors
 PRODUCT_PACKAGES += \
+    android.hardware.sensors@1.0-impl \
+	android.hardware.sensors@1.0-service \
     sensors.tegra
 
 PRODUCT_COPY_FILES += \
@@ -166,6 +224,15 @@ PRODUCT_COPY_FILES += \
 
 # System Properties
 -include device/xiaomi/mocha/system_prop.mk
+
+# Thermal
+PRODUCT_PACKAGES += \
+    android.hardware.thermal@1.0-impl \
+    thermal.tn8
+
+# USB HAL
+PRODUCT_PACKAGES += \
+    android.hardware.usb@1.0-service
 
 # Wifi
 PRODUCT_COPY_FILES += \
@@ -176,6 +243,7 @@ PRODUCT_COPY_FILES += \
 $(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/config/config-bcm.mk)
 $(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/firmware/bcm4354/device-bcm.mk)
 PRODUCT_PACKAGES += \
+    android.hardware.wifi@1.0-service \
     hostapd \
     wpa_supplicant \
     wpa_supplicant.conf
