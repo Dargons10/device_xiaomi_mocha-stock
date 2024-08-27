@@ -20,9 +20,6 @@ TARGET_SCREEN_WIDTH := 1536
 TARGET_TEGRA_VERSION := t124
 
 $(call inherit-product, frameworks/native/build/phone-xxhdpi-2048-dalvik-heap.mk)
-$(call inherit-product, frameworks/native/build/phone-xxhdpi-2048-hwui-memory.mk)
-
-
 $(call inherit-product-if-exists, vendor/xiaomi/mocha/mocha-vendor.mk)
 
 # Overlay
