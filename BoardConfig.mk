@@ -74,7 +74,7 @@ TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS := true
 EXTENDED_FONT_FOOTPRINT := true
 
 # Kernel
-BOARD_KERNEL_CMDLINE := androidboot.selinux=permissive androidboot.hardware=tn8
+BOARD_KERNEL_CMDLINE := vpr_resize androidboot.selinux=permissive androidboot.hardware=tn8
 BOARD_KERNEL_BASE := 0x10000000
 BOARD_RAMDISK_OFFSET := 0x02000000
 BOARD_KERNEL_PAGESIZE := 2048
