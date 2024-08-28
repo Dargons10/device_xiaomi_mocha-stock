@@ -1,6 +1,9 @@
 # Inherit device configuration for mocha.
 $(call inherit-product, device/xiaomi/mocha/full_mocha.mk)
 
+# Boot Animtion
+TARGET_BOOTANIMATION_HALF_RES := true
+
 # Inherit some common CM stuff.
 $(call inherit-product, vendor/lineage/config/common_mini_tablet_wifionly.mk)
 
