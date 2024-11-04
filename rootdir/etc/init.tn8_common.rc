@@ -46,7 +46,7 @@ on init
 
 service charger /charger
     group graphics input
-    seclabel u:r:healthd:s0
+    seclabel u:r:charger:s0
     class charger
 
 on charger
