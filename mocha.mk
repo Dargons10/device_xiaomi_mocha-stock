@@ -27,7 +27,7 @@ TARGET_TEGRA_VERSION := t124
 PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/audio/audio_policy.conf:system/etc/audio_policy.conf \
     device/xiaomi/mocha/audio/audio.mocha.xml:system/etc/audio.mocha.xml \
-    device/xiaomi/mocha/audio/audio_effects.xml:vendor/etc/audio_effects.xml
+    device/xiaomi/mocha/audio/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml
 
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-impl \
