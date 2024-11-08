@@ -96,6 +96,10 @@ PRODUCT_PACKAGES += \
     brcm-uim-sysfs \
     libfmjni
 
+# Gatekeeper
+PRODUCT_PACKAGES += \
+    gatekeeper.tegra
+
 # Grapchis
 PRODUCT_PACKAGES += \
    android.hardware.graphics.allocator@2.0-impl \
