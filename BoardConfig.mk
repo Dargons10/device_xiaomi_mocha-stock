@@ -106,6 +106,22 @@ TARGET_RECOVERY_DEVICE_DIRS += $(LOCAL_PATH)
 TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/etc/fstab.tn8
 BOARD_NO_SECURE_DISCARD := true
 
+# Shims
+TARGET_LD_SHIM_LIBS := \
+    /system/vendor/lib/libnvomxadaptor.so|libmocha_omx.so \
+    /system/lib/hw/camera.vendor.tegra.so|libmocha_camera.so \
+    /system/lib/hw/camera.vendor.tegra.so|libmocha_libc.so \
+    /system/lib/libcutils.so|libshim_atomic.so \
+    /system/lib/libaudioclient.so|libshim_audio.so \
+    /system/lib/libaudioprocessing.so|libshim_audio.so \
+    /system/lib/libbinder.so|libshim_binder.so \
+    /system/lib/libm.so|libshim_bionic.so \
+    /system/lib/libgui.so|libshim_gui.so \
+    /system/lib/libicuuc.so|libshim_icuuc.so \
+    /system/lib/libstagefright.so|libshim_stagefright.so \
+    /system/lib/libui.so|libshim_ui.so \
+    /system/lib/libutils.so|libshim_utils.so
+
 # SELinux
 BOARD_SEPOLICY_DIRS += $(LOCAL_PATH)/sepolicy
 
