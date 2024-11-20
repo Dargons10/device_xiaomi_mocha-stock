@@ -126,6 +126,11 @@ PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/keylayout/gpio-keys.kl:system/usr/keylayout/gpio-keys.kl \
     device/xiaomi/mocha/keylayout/Vendor_0955_Product_7210.kl:system/usr/keylayout/Vendor_0955_Product_7210.kl
 
+# Light
+PRODUCT_PACKAGES += \
+    android.hardware.light@2.0-impl \
+    android.hardware.light@2.0-service
+
 # Manifest HIDL
 PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/manifest.xml:system/vendor/manifest.xml
