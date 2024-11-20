@@ -128,9 +128,8 @@ PRODUCT_COPY_FILES += \
 
 # Light
 PRODUCT_PACKAGES += \
-    android.hardware.light@2.0-impl \
-    android.hardware.light@2.0-service
-
+    android.hardware.light@2.0-service.mocha 
+        
 # Manifest HIDL
 PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/manifest.xml:system/vendor/manifest.xml
@@ -186,7 +185,7 @@ PRODUCT_COPY_FILES += \
 
 # Power
 PRODUCT_PACKAGES += \
-    android.hardware.power@1.0-impl \
+    android.hardware.power@1.0-service.mocha \
     power.tegra
 
 # Product
@@ -247,6 +246,10 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     android.hardware.thermal@1.0-impl \
     thermal.tn8
+
+# Vibrator
+PRODUCT_PACKAGES += \
+    android.hardware.vibrator@1.0-service.mocha
 
 # USB HAL
 PRODUCT_PACKAGES += \
