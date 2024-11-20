@@ -225,6 +225,19 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/sensors/etc/hals.conf:system/etc/sensors/hals.conf
 
+# Shims
+PRODUCT_PACKAGES += \
+    libshim_atomic \
+    libshim_audio \
+    libshim_binder \
+    libshim_bionic \
+    libshim_gui \
+    libshim_icuuc \
+    libshim_stagefright \
+    libshim_ui \
+    libshim_utils
+
+#STLPORT
 PRODUCT_COPY_FILES += \
     prebuilts/ndk/current/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_shared.so:system/lib/libstlport.so
 
