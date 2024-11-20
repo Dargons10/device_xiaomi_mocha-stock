@@ -148,9 +148,8 @@ PRODUCT_PACKAGES += \
 
 # Memtrack
 PRODUCT_PACKAGES += \
-    android.hardware.memtrack@1.0-impl \
-    android.hardware.memtrack@1.0-service 
-
+    android.hardware.memtrack@1.0-impl
+    
 # NVIDIA
 PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/permissions/com.nvidia.blakemanager.xml:system/etc/permissions/com.nvidia.blakemanager.xml \
