@@ -82,11 +82,6 @@ PRODUCT_PACKAGES += \
     android.hardware.configstore@1.0-impl \
     android.hardware.configstore@1.0-service
 
-# Configstore HAL
-PRODUCT_PACKAGES += \
-    android.hardware.configstore@1.0-impl \
-    android.hardware.configstore@1.0-service
-
 # Dexpreopt
 PRODUCT_DEXPREOPT_SPEED_APPS += SystemUI
 
