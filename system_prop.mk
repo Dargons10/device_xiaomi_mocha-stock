@@ -12,7 +12,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.opengles.version = 196609 \
 	persist.tegra.compositor=surfaceflinger \
-    ro.zygote.disable_gl_preload=true
+    ro.zygote.disable_gl_preload=true \
+    ro.sf.disable_triple_buffer=true \
+	debug.sf.disable_backpressure=0 \
+	ro.input.noresample=1 \
+	ro.com.google.clientidbase=android-nvidia
 
 # Input
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -50,7 +54,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 #Usb
 PRODUCT_PROPERTY_OVERRIDES += \
-	persist.sys.usb.config=mtp \
+	persist.sys.usb.config=adb \
+	sys.usb.config=adb \
 	persist.sys.isUsbOtgEnabled=1
 
 # Widevine drm
