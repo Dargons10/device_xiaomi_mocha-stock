@@ -230,13 +230,6 @@ service bugreport /system/bin/dumpstate -d -p -B -o /data/data/com.android.shell
 # unified scaling setup
 import init.ussrd.rc
 
-# Enable rbe
-# thresIncr:50  thresIncrCntMax:6  thresDecr:70  thresDecrCntMax:2
-# The change from default is the thresDecrCntMax.  Default is 3.
-service wlbwservice /system/bin/wlbwservice -t 50 6 70 2
-    class main
-    user system
-    group system inet net_admin
 
 # Thie yields each tegra wdt expiration to be at 7.5 secs and fourth expiration for reboot at 30 secs.
 service watchdogd /sbin/watchdogd 10 20
