@@ -47,7 +47,7 @@ on init
 
 on boot
     #change vm memory parameter
-    write /proc/sys/vm/lowmem_reserve_ratio 128 128 32
+    write /proc/sys/vm/lowmem_reserve_ratio "128 128"
 
 service media /system/bin/mediaserver
     class main
