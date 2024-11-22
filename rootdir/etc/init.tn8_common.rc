@@ -6,8 +6,6 @@
 #documentation without an express license agreement from NVIDIA Corporation
 #is strictly prohibited.
 
-import init.tn8diag.rc
-
 on early-init
     # create /oem symbol link
     symlink /system/vendor/oem /oem
