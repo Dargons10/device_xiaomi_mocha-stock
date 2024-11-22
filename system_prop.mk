@@ -15,9 +15,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.zygote.disable_gl_preload=true \
     ro.sf.disable_triple_buffer=true \
 	debug.sf.disable_backpressure=0 \
-	ro.input.noresample=1 \
-	ro.com.google.clientidbase=android-nvidia
-
+	ro.input.noresample=1 
+	
 # Input
 PRODUCT_PROPERTY_OVERRIDES += \
 	ro.input.noresample=1
