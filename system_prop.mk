@@ -48,9 +48,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
 	pbc.gpu.cap=/dev/gpu_freq_max \
 	pbc.gpu.cap.af=/sys/devices/platform/host1x/gk20a.0/devfreq/gk20a.0/available_frequencies 
 
-# Radio
-PRODUCT_PROPERTY_OVERRIDES += \
-	ro.radio.noril=yes
 
 #Usb
 PRODUCT_PROPERTY_OVERRIDES += \
