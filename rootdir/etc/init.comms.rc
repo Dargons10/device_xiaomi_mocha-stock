@@ -31,6 +31,9 @@ on boot
 # Wlan Interface Port
     setprop wifi.interface wlan0
 
+# WiFi Firmware
+    chown wifi wifi /sys/module/bcmdhd/parameters/firmware_path
+
 on post-fs-data
     mkdir /data/misc/wifi 0771 wifi wifi
     mkdir /data/misc/wifi/sockets 0770 wifi wifi
