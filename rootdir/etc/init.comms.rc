@@ -7,25 +7,26 @@
 #is strictly prohibited.
 
 on boot
-    # UART device
-    chmod 0660 /dev/ttyHS2
-    chown bluetooth bluetooth /dev/ttyHS2
-    chmod 0660 /dev/ttyTHS2
-    chown bluetooth bluetooth /dev/ttyTHS2
-
-    # power up/down interface
-    chmod 0660 /sys/class/rfkill/rfkill0/state
-    chmod 0660 /sys/class/rfkill/rfkill0/type
-    write /sys/class/rfkill/rfkill0/state 0
+    #Bluetooth 
     chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
     chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
+    #Bluetooth LPM 
+    chown bluetooth bluetooth /proc/bluetooth/sleep/lpm 
+    chown bluetooth bluetooth /proc/bluetooth/sleep/btwrite
+    
+    # power up/down interface
+    chmod 0660 /sys/class/rfkill/rfkill0/state
+    chown bluetooth bluetooth /dev/ttyHS2
+    chmod 0660 /dev/ttyHS2
+    chmod 0660 /sys/class/rfkill/rfkill0/type
+    write /sys/class/rfkill/rfkill0/state 0
+    
 
     # bluetooth MAC address programming
     chown bluetooth bluetooth ro.bt.bdaddr_path
     chown bluetooth bluetooth /system/etc/bluetooth
     chown bluetooth bluetooth /mnt/factory/bluetooth/bt_mac.txt
     setprop ro.bt.bdaddr_path "/mnt/factory/bluetooth/bt_mac.txt"
-
 
 on post-fs-data
     mkdir /data/misc/wifi 0771 wifi wifi
