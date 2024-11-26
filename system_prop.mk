@@ -62,4 +62,5 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     wifi.interface=wlan0 \
 	ap.interface=wlan0 \
-	persist.wlan.ti.calibrated = 0
+	persist.wlan.ti.calibrated = 0 \
+	persist.debug.wfd.enable=1

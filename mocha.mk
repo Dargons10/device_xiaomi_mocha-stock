@@ -264,7 +264,8 @@ PRODUCT_PACKAGES += \
 
 # Wifi
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/wifi/dhcpcd.conf:system/etc/dhcpcd/dhcpcd.conf
+    device/xiaomi/mocha/wifi/dhcpcd.conf:system/etc/dhcpcd/dhcpcd.conf \
+    device/xiaomi/mocha/wifi/p2p_supplicant_overlay.conf:system/etc/wifi/p2p_supplicant_overlay.conf
 
 # Wifi
 # All Shield devices xurrently use broadcom wifi / bluetooth modules
