@@ -1,0 +1,14 @@
+diff --git a/opengl/libs/EGL/egl_display.cpp b/opengl/libs/EGL/egl_display.cpp
+index 4e5833ab1..440ff4464 100644
+--- a/opengl/libs/EGL/egl_display.cpp
++++ b/opengl/libs/EGL/egl_display.cpp
+@@ -168,6 +168,9 @@ EGLBoolean egl_display_t::initialize(EGLint *major, EGLint *minor) {
+         cnx->major = -1;
+         cnx->minor = -1;
+         if (cnx->dso) {
++
++            disp.dpy = cnx->egl.eglGetDisplay(EGL_DEFAULT_DISPLAY);
++
+             EGLDisplay idpy = disp.dpy;
+             if (cnx->egl.eglInitialize(idpy, &cnx->major, &cnx->minor)) {
+                 //ALOGD("initialized dpy=%p, ver=%d.%d, cnx=%p",
