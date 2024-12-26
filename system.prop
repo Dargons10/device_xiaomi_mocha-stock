@@ -6,3 +6,5 @@ persist.media.treble_omx=false
 # We are using old omx blobs
 media.stagefright.less-secure=true
 media.stagefright.legacyencoder=true
+
+ro.bt.bdaddr_path=/data/mocha_btmacaddr.txt

@@ -1,3 +1,7 @@
+# BT
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.bt.bdaddr_path=/data/mocha_btmacaddr.txt
+
 # Didim
 PRODUCT_PROPERTY_OVERRIDES += \
 persist.tegra.didim.enable = 1 \
