@@ -1,3 +1,0 @@
-type uim, domain;
-allow uim self:capability { net_admin dac_override };
-get_prop(uim, bluetooth_prop)
