@@ -27,8 +27,8 @@
 #define BT_MAC_PROP "ro.bt.bdaddr_path"
 #define BT_MAC_PROP1 "persist.service.bdroid.bdaddr"
 #define BT_MAC_PROP2 "ro.boot.btmacaddr"
-#define WIFI_MAC_FILE "/data/mocha_macaddr.txt"
-#define BT_MAC_FILE "/data/mocha_btmacaddr.txt"
+#define WIFI_MAC_FILE "/system/etc/mocha_macaddr.txt"
+#define BT_MAC_FILE "/system/etc/mocha_btmacaddr.txt"
 #define BT_MAC_TAG "XIAOMIBT!"
 #define WIFI_MAC_TAG "XIAOMIWF!"
 
