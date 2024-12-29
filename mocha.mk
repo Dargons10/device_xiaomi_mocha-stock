@@ -222,7 +222,9 @@ PRODUCT_PACKAGES += \
     init.tn8_common.rc \
     init.ussrd.rc \
     power.tn8.rc \
-    ueventd.tn8.rc
+    ueventd.tn8.rc \
+    ussr_setup
+
 
 # Seccomp
 PRODUCT_COPY_FILES += \
