@@ -223,7 +223,7 @@ PRODUCT_PACKAGES += \
     init.ussrd.rc \
     power.tn8.rc \
     ueventd.tn8.rc \
-    ussr_setup
+    /etc/ussr_setup
 
 
 # Seccomp
