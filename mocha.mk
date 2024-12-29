@@ -154,8 +154,16 @@ PRODUCT_PACKAGES += \
 
 # Memtrack
 PRODUCT_PACKAGES += \
-    android.hardware.memtrack@1.0-impl
-    
+    android.hardware.memtrack@1.0-impl \
+
+# Memory Optimizations
+PRODUCT_PROPERTY_OVERRIDES += \
+     ro.vendor.qti.am.reschedule_service=true \
+     ro.vendor.qti.sys.fw.use_trim_settings=true \
+     ro.vendor.qti.sys.fw.trim_empty_percent=50 \
+     ro.vendor.qti.sys.fw.trim_cache_percent=100 \
+     ro.vendor.qti.sys.fw.empty_app_percent=25
+
 # NVIDIA
 PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/permissions/com.nvidia.blakemanager.xml:system/etc/permissions/com.nvidia.blakemanager.xml \
