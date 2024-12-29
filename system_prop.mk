@@ -1,6 +1,6 @@
 # BT
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.bt.bdaddr_path=/system/etc/mocha_btmacaddr.txt
+    ro.bt.bdaddr_path=/system/etc/bluetooth/bdaddr
 
 # Didim
 PRODUCT_PROPERTY_OVERRIDES += \

@@ -25,8 +25,7 @@ on boot
     # bluetooth MAC address programming
     chown bluetooth bluetooth ro.bt.bdaddr_path
     chown bluetooth bluetooth /system/etc/bluetooth
-    chown bluetooth bluetooth /mnt/factory/bluetooth/bt_mac.txt
-    setprop ro.bt.bdaddr_path "/mnt/factory/bluetooth/bt_mac.txt"
+
 
 # Wlan Interface Port
     setprop wifi.interface wlan0

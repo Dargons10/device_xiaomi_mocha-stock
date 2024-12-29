@@ -7,4 +7,4 @@ persist.media.treble_omx=false
 media.stagefright.less-secure=true
 media.stagefright.legacyencoder=true
 
-ro.bt.bdaddr_path=/system/etc/mocha_btmacaddr.txt
+ro.bt.bdaddr_path=/system/etc/bluetooth/bdaddr

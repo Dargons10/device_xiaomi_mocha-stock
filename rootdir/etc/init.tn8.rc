@@ -52,14 +52,14 @@ on boot
 service media /system/bin/mediaserver
     class main
     user media
-    group audio camera inet net_bt net_bt_admin net_bw_acct drmrpc mediadrm wakelock
+    group audio camera inet net_bt bluetooth net_bw_acct drmrpc mediadrm wakelock
     ioprio rt 4
     writepid /dev/cpuset/foreground/tasks /dev/stune/foreground/tasks
 
 # brcm-uim-sysfs (BT/FM/ANT+)
-service uim /system/bin/brcm-uim-sysfs
-    class late_start
-    user root
-    group bluetooth net_bt_admin net_bt
+#service uim /system/bin/brcm-uim-sysfs
+    #class late_start
+    #user root
+    #group bluetooth net_bt
   
 
