@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (C) 2019 The LineageOS Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-allow zygote gpu_device:chr_file rw_file_perms;
-binder_use(zygote);
-
-# allow zygote (for media_profile.xml) to read files/dirs in /data/camera_config/
-r_dir_file(zygote, camera_config_file)
-
+# fstab formatable flag
+allow e2fs rpx_block_device:blk_file rw_file_perms;
+allow e2fs usercalib_block_device:blk_file rw_file_perms;

@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Allow wpa_supplicant to access symlinks created by wifi_loader
-allow hal_wifi_supplicant wifi_data_file:lnk_file { getattr read write };
+# allow default hal to access wifi vendor firmware file
+allow hal_wifi_default vendor_firmware_wifi_file:file r_file_perms;
 
-r_dir_file(hal_wifi_supplicant, factory_file)
+#Allow access to file /mnt/factory/wifi/wifi_mac.txt
+r_dir_file(hal_wifi_default, factory_file)
 
-# Access to mmc_host
-r_dir_file(hal_wifi_supplicant, sysfs_mmc_host)
-
-# Access to sysfs_netcfg
-r_dir_file(hal_wifi_supplicant, sysfs_netcfg)
+r_dir_file(hal_wifi_default, wifi_data_file)

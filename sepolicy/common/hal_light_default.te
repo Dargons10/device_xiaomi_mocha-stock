@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-allow zygote gpu_device:chr_file rw_file_perms;
-binder_use(zygote);
+# allow backlight HAL to adjust lcd panel brightness
+allow hal_light_default sysfs_class_backlight:file  rw_file_perms;
+allow hal_light_default sysfs_class_backlight:dir  rw_dir_perms;
 
-# allow zygote (for media_profile.xml) to read files/dirs in /data/camera_config/
-r_dir_file(zygote, camera_config_file)
-
+# allow backlight HAL to read/write below backlight I2C bus node
+# e.x /sys/devices/(*).i2c/i2c-(*)/backlight/pwm-backlight/brightness
+allow hal_light_default sysfs_nvi2c:file  rw_file_perms;
+allow hal_light_default sysfs_nvi2c:dir  rw_dir_perms;
