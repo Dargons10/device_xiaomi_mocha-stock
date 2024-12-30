@@ -147,7 +147,9 @@ TARGET_LD_SHIM_LIBS := \
     /system/lib/libutils.so|libshim_utils.so
 
 # SELinux
-BOARD_SEPOLICY_DIRS += $(LOCAL_PATH)/sepolicy
+BOARD_SEPOLICY_DIRS += device/xiaomi/mocha/sepolicy/common \
+                       device/xiaomi/mocha/sepolicy/lineage-common \
+                       device/xiaomi/mocha/sepolicy/mocha
 
 # ThermalHAL
 TARGET_THERMALHAL_VARIANT := tegra
