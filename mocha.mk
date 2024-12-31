@@ -64,11 +64,14 @@ PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/camera/model_frontal.xml:system/etc/model_frontal.xml
 
 PRODUCT_PACKAGES += \
+    android.hardware.camera.provicer@2.4-impl \
+    camera.device@1.0-impl \
     camera.tegra \
     libmocha_camera \
     libmocha_omx \
     libpowerservice_client \
-    libmocha_libc
+    libmocha_libc \
+    Snap
 
 # Comm Permissions
 PRODUCT_COPY_FILES += \
@@ -152,9 +155,6 @@ PRODUCT_PACKAGES += \
     android.hardware.media.omx@1.0-impl \
     android.hardware.media.omx@1.0-service
 
-# Memtrack
-PRODUCT_PACKAGES += \
-    android.hardware.memtrack@1.0-impl \
 
 # Memory Optimizations
 PRODUCT_PROPERTY_OVERRIDES += \
