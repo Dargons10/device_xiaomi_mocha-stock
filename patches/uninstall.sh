@@ -1,7 +1,7 @@
 #!/bin/sh
 
 rootdirectory="$PWD"
-dirs="bionic/libs frameworks/base frameworks/native"
+dirs="bionic/libm frameworks/base frameworks/native"
 
 for dir in $dirs ; do
 	cd $rootdirectory
