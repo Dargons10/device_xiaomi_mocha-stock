@@ -1,5 +1,5 @@
 diff --git a/opengl/java/android/opengl/GLSurfaceView.java b/opengl/java/android/opengl/GLSurfaceView.java
-index 0f0a7e9d131..abdf4cf8323 100644
+index 0f0a7e9d131..d9bdf429b4b 100644
 --- a/opengl/java/android/opengl/GLSurfaceView.java
 +++ b/opengl/java/android/opengl/GLSurfaceView.java
 @@ -969,7 +969,7 @@ public class GLSurfaceView extends SurfaceView implements SurfaceHolder.Callback
@@ -7,7 +7,7 @@ index 0f0a7e9d131..abdf4cf8323 100644
                              EGL10.EGL_ALPHA_SIZE, 0);
                      if ((r == mRedSize) && (g == mGreenSize)
 -                            && (b == mBlueSize) && (a == mAlphaSize)) {
-+                             && (b == mBlueSize) && (a >= mAlphaSize)) {
++                            && (b == mBlueSize) && (a >= mAlphaSize)) {
                          return config;
                      }
                  }
