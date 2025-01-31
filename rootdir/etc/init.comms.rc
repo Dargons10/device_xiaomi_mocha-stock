@@ -7,24 +7,25 @@
 #is strictly prohibited.
 
 on boot
-    #Bluetooth 
-    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
-    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type
-    #Bluetooth LPM 
-    chown bluetooth bluetooth /proc/bluetooth/sleep/lpm 
-    chown bluetooth bluetooth /proc/bluetooth/sleep/btwrite
+    # UART device
+    chmod 0660 /dev/ttyHS2
+    chown bluetooth bluetooth /dev/ttyHS2
+    chmod 0660 /dev/ttyTHS2
+    chown bluetooth bluetooth /dev/ttyTHS2
     
     # power up/down interface
+    write /sys/class/rfkill/rfkill0/state 1
     chmod 0660 /sys/class/rfkill/rfkill0/state
-    chown bluetooth bluetooth /dev/ttyHS2
-    chmod 0660 /dev/ttyHS2
     chmod 0660 /sys/class/rfkill/rfkill0/type
-    write /sys/class/rfkill/rfkill0/state 0
-    
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/state
+    chown bluetooth bluetooth /sys/class/rfkill/rfkill0/type-
 
     # bluetooth MAC address programming
     chown bluetooth bluetooth ro.bt.bdaddr_path
     chown bluetooth bluetooth /system/etc/bluetooth
+    chown bluetooth bluetooth /data/mocha_btmacaddr.txt
+    setprop ro.bt.bdaddr_path "/data/mocha_btmacaddr.txt"
+
 
 
 # Wlan Interface Port
@@ -50,11 +51,9 @@ service wpa_supplicant /system/vendor/bin/hw/wpa_supplicant \
     disabled
     oneshot
 
-
 service dns_masq /system/bin/dnsmasq --no-daemon --no-resolv --no-poll --dhcp-option-force=43,ANDROID_METERED --dhcp-range=192.168.42.2,192.168.42.254,1h &
     class main
     user dhcp
     group dhcp wifi system
     disabled
     oneshot
-

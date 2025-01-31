@@ -1,4 +1,6 @@
 on boot
+ exec_start init-btloader-sh
+
 # Power management settings
     write /sys/devices/system/cpu/cpuquiet/tegra_cpuquiet/no_lp 0
 
@@ -69,9 +71,11 @@ on init
     export VIBE_PIPE_PATH /dev/pipes
     mkdir /dev/pipes 0771 system system
 
-# Loads real wifi and bt mac from /dev/block/platform/sdhci-tegra.3/by-name/BKB
-service conn_wifi /system/bin/conn_init -op
+
+ service init-btloader-sh /system/bin/init.btloader.sh 
     class main
     user root
-    group root
+    group root system
+    disabled
     oneshot
+

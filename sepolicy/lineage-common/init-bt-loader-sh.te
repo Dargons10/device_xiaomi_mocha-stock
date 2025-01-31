@@ -1,0 +1,9 @@
+# btloader service
+type init-btloader, domain;
+type init-btloader_exec, exec_type, file_type;
+
+init_daemon_domain(init-btloader)
+set_prop(init-btloader, bdaddr_path_prop)
+
+allow init-btloader shell_exec:file rx_file_perms;
+allow init-btloader toolbox_exec:file rx_file_perms;

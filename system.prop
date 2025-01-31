@@ -1,5 +1,5 @@
 # BT
-ro.bt.bdaddr_path=/system/etc/bluetooth/bdaddr
+ro.bt.bdaddr_path=/system/vendor/etc/mocha_btmacaddr.txt
 
 # Didim
 persist.tegra.didim.enable = 1 

@@ -51,7 +51,8 @@ PRODUCT_PACKAGES += \
 
 # Bluetooth
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/bluetooth/bt_vendor.conf:system/etc/bluetooth/bt_vendor.conf
+    device/xiaomi/mocha/bluetooth/bt_vendor.conf:system/etc/bluetooth/bt_vendor.conf \
+    device/xiaomi/mocha/rootdir/etc/init.btloader.sh:system/bin/init.btloader.sh
 
 PRODUCT_PACKAGES += \
     libbt-vendor
@@ -276,15 +277,14 @@ PRODUCT_PACKAGES += \
 
 # Wifi
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/wifi/dhcpcd.conf:system/etc/dhcpcd/dhcpcd.conf \
-    device/xiaomi/mocha/wifi/p2p_supplicant_overlay.conf:system/etc/wifi/p2p_supplicant_overlay.conf
+    device/xiaomi/mocha/wifi/dhcpcd.conf:system/etc/dhcpcd/dhcpcd.conf 
 
 # Wifi
 # All Shield devices xurrently use broadcom wifi / bluetooth modules
 $(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/config/config-bcm.mk)
-$(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/firmware/bcm4354/device-bcm.mk)
 PRODUCT_PACKAGES += \
     android.hardware.wifi@1.0-service \
+    wificond \
     hostapd \
     conn_init \
     wpa_supplicant \
