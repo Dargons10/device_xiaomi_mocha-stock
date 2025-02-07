@@ -76,6 +76,9 @@ on post-fs-data
 
     # cpu volt cap
     mkdir /data/misc/cvc 0774 system system
+    
+    # create directory for mediaserver EGL blob cache
+    mkdir /data/misc/mediaserver 0770 media media
 
 # Set up HDCP
 import init.hdcp.rc
