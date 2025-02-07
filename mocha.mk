@@ -214,9 +214,7 @@ PRODUCT_PACKAGES += \
     fstab.tn8 \
     init.cal.rc \
     init.comms.rc \
-    init.icera.rc \
     init.hdcp.rc \
-    init.ray_touch.rc \
     init.t124.rc \
     init.tegra.rc \
     init.tlk.rc \
@@ -226,7 +224,7 @@ PRODUCT_PACKAGES += \
     init.ussrd.rc \
     power.tn8.rc \
     ueventd.tn8.rc \
-    /etc/ussr_setup
+    ussr_setup
 
 
 # Seccomp
