@@ -282,8 +282,6 @@ PRODUCT_COPY_FILES += \
 $(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/config/config-bcm.mk)
 PRODUCT_PACKAGES += \
     android.hardware.wifi@1.0-service \
-    wificond \
     hostapd \
-    conn_init \
     wpa_supplicant \
     wpa_supplicant.conf
