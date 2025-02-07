@@ -1,4 +1,5 @@
 # BT
+PRODUCT_PROPERTY_OVERRIDES += \
 ro.bt.bdaddr_path=/system/vendor/etc/mocha_btmacaddr.txt
 
 # Graphics
