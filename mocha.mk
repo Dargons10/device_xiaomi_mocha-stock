@@ -73,8 +73,7 @@ PRODUCT_PACKAGES += \
     libmocha_camera \
     libmocha_omx \
     libpowerservice_client \
-    libmocha_libc \
-    Snap
+    libmocha_libc 
 
 # Comm Permissions
 PRODUCT_COPY_FILES += \
@@ -171,6 +170,10 @@ PRODUCT_PROPERTY_OVERRIDES += \
      ro.vendor.qti.sys.fw.trim_empty_percent=50 \
      ro.vendor.qti.sys.fw.trim_cache_percent=100 \
      ro.vendor.qti.sys.fw.empty_app_percent=25
+
+# Memtrack HAL
+PRODUCT_PACKAGES += \
+    android.hardware.memtrack@1.0-impl
 
 # NVIDIA
 PRODUCT_COPY_FILES += \
