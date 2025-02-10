@@ -4,7 +4,13 @@ ro.bt.bdaddr_path=/system/vendor/etc/mocha_btmacaddr.txt
 
 # Graphics
 PRODUCT_PROPERTY_OVERRIDES += \
-    persist.sys.ui.hw=true \
+    ro.sf.lcd_density=320 \
+	ro.opengles.version = 196609 \
+	persist.tegra.compositor=surfaceflinger \
+	ro.zygote.disable_gl_preload=true \
+	ro.sf.disable_triple_buffer=true\
+	persist.sys.ui.hw=true \
+	persist.sys.ui.hw=true \
     debug.sf.disable_backpressure=1 \
     debug.sf.latch_unsignaled=1
 	
