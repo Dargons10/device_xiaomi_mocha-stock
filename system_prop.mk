@@ -1,6 +1,12 @@
 # BT
 PRODUCT_PROPERTY_OVERRIDES += \
-ro.bt.bdaddr_path=/system/vendor/etc/mocha_btmacaddr.txt
+	ro.bt.bdaddr_path=/system/vendor/etc/mocha_btmacaddr.txt
+
+# Didim
+PRODUCT_PROPERTY_OVERRIDES += \
+	persist.tegra.didim.enable = 1\
+	persist.tegra.didim.video = 5 \
+	persist.tegra.didim.normal = 3 
 
 # Graphics
 PRODUCT_PROPERTY_OVERRIDES += \
