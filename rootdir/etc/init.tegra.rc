@@ -97,6 +97,7 @@ on boot
 ## cmhw permissions
 # key disabler
     chown system system /sys/devices/platform/tegra12-i2c.3/i2c-3/3-004a/enable_keys
+    chown system system /sys/devices/platform/tegra12.i2c.3/i2c-3/3-0020/input/input0/0dbutton
     chown system system /sys/devices/platform/tegra12-i2c.3/i2c-3/3-0020/input/input3/0dbutton
 
 # vibrator intensity
