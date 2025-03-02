@@ -55,12 +55,10 @@ PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/rootdir/etc/init.btloader.sh:system/bin/init.btloader.sh
 
 PRODUCT_PACKAGES += \
-    libbt-vendor
-
-PRODUCT_PACKAGES += \
+    libbt-vendor \
     android.hardware.bluetooth@1.0-impl \
-    android.hardware.bluetooth@1.0-service \
-    
+    android.hardware.bluetooth@1.0-service
+
 # Camera
 PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/camera/nvcamera.conf:system/etc/nvcamera.conf \
