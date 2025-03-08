@@ -112,7 +112,11 @@ BOARD_RECOVERYIMAGE_PARTITION_SIZE := 20971520
 BOARD_FLASH_BLOCK_SIZE := 131072
 
 # LineageHW
-BOARD_HARDWARE_CLASS := device/xiaomi/mocha/lineagehw
+BOARD_USES_LINEAGE_HARDWARE := true
+BOARD_HARDWARE_CLASS := \
+    hardware/lineage/lineagehw
+
+JAVA_SOURCE_OVERLAYS := org.lineageos.hardware|$(LOCAL_PATH)/lineagehw|**/*.java
 
 # Offmode Charging
 BOARD_CHARGER_DISABLE_INIT_BLANK := true
