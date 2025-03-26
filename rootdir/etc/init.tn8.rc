@@ -15,10 +15,7 @@ import init.tn8.usb.rc
 on post-fs-data
     chmod 0644 /sys/kernel/cluster/active
 
-    chown system system /dev/sysmatdrv
-    chmod 0660 /dev/sysmatdrv
-    insmod /system/lib/modules/texfat.ko
-
+    
 on init
     # Mount a tmpfs into /mnt/tmp for hosting nvram, phs shared memory
     mkdir /mnt/tmp 0770 system system
@@ -57,9 +54,8 @@ service media /system/bin/mediaserver
     writepid /dev/cpuset/foreground/tasks /dev/stune/foreground/tasks
 
 # brcm-uim-sysfs (BT/FM/ANT+)
-#service uim /system/bin/brcm-uim-sysfs
-    #class late_start
-    #user root
-    #group bluetooth net_bt
-  
-
+service uim /system/bin/brcm-uim-sysfs
+    class late_start
+    user root
+    group bluetooth net_bt_admin net_bt
+    seclabel u:r:uim:s0
