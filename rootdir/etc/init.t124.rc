@@ -67,12 +67,7 @@ on init
     mkdir /mnt/tmp 0770 system system
     mount tmpfs tmpfs /mnt/tmp mode=0775,gid=1003
 
-    # Immersion
-    export VIBE_PIPE_PATH /dev/pipes
-    mkdir /dev/pipes 0771 system system
-
-
- service init-btloader-sh /system/bin/init.btloader.sh 
+service init-btloader-sh /system/bin/init.btloader.sh 
     class main
     user root
     group root system
