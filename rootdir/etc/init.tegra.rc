@@ -182,9 +182,6 @@ on boot
     chown system system /sys/bus/i2c/drivers/lp5521/0-0032/select_engine
     chown system system /sys/bus/i2c/drivers/lp5521/0-0032/run_engine
 
-# Set GL driver yield function to sleep for 250us
-    setprop persist.tegra.yieldFunctionSlow 4
-
 # TLK storage service
 import init.tlk.rc
 
