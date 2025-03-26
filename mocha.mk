@@ -291,6 +291,7 @@ PRODUCT_COPY_FILES += \
 # Wifi
 # All Shield devices xurrently use broadcom wifi / bluetooth modules
 $(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/config/config-bcm.mk)
+$(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/firmware/bcm4354/device-bcm.mk)
 PRODUCT_PACKAGES += \
     android.hardware.wifi@1.0-service \
     hostapd \
