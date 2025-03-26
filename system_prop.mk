@@ -23,7 +23,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.zygote.disable_gl_preload=true \
     ro.sf.disable_triple_buffer=true\
     persist.sys.ui.hw=true \
-    persist.sys.ui.hw=true \
     debug.sf.disable_backpressure=1 \
     debug.sf.latch_unsignaled=1
 	
