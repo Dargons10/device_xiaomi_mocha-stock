@@ -23,8 +23,8 @@ on boot
     # bluetooth MAC address programming
     chown bluetooth bluetooth ro.bt.bdaddr_path
     chown bluetooth bluetooth /system/etc/bluetooth
-    chown bluetooth bluetooth /system/vendor/etc/mocha_btmacaddr.txt
-    setprop ro.bt.bdaddr_path "/system/vendor/etc/mocha_btmacaddr.txt"
+    chown bluetooth net_bt_stack /mnt/factory/bluetooth/bt_mac.txt
+    setprop ro.bt.bdaddr_path "/mnt/factory/bluetooth/bt_mac.txt"
 
 # WiFi Firmware
     chown wifi wifi /sys/module/bcmdhd/parameters/firmware_path
