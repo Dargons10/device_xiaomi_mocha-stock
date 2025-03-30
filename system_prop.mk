@@ -24,7 +24,10 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.sf.disable_triple_buffer=true\
     persist.sys.ui.hw=true \
     debug.sf.disable_backpressure=1 \
-    debug.sf.latch_unsignaled=1
+    debug.sf.latch_unsignaled=1 \
+    debug.composition.type=gpu \
+    debug.egl.hw=1 \
+    debug.sf.hw=1
 	
 # Input
 PRODUCT_PROPERTY_OVERRIDES += \

@@ -7,3 +7,4 @@ set_prop(init-btloader, bdaddr_path_prop)
 
 allow init-btloader shell_exec:file rx_file_perms;
 allow init-btloader toolbox_exec:file rx_file_perms;
+ 

@@ -237,6 +237,9 @@ PRODUCT_PACKAGES += \
     ueventd.tn8.rc \
     ussr_setup
 
+#Renderer
+PRODUCT_COPY_FILES += \
+    device/xiaomi/mocha/rootdir/etc/init.renderer.sh:system/bin/init.renderer.sh
 
 # Seccomp
 PRODUCT_COPY_FILES += \
