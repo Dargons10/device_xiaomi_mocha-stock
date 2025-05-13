@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015, The CyanogenMod Project
+ *           (C) 2017, The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,11 +124,11 @@ static struct hw_module_methods_t camera_module_methods = {
 camera_module_t HAL_MODULE_INFO_SYM = {
     .common = {
          .tag = HARDWARE_MODULE_TAG,
-         .module_api_version = CAMERA_MODULE_API_VERSION_2_3,
+         .module_api_version = CAMERA_MODULE_API_VERSION_2_4,
          .hal_api_version = HARDWARE_HAL_API_VERSION,
          .id = CAMERA_HARDWARE_MODULE_ID,
          .name = "MI PAD Camera Wrapper",
-         .author = "The CyanogenMod Project",
+         .author = "The LineageOS Project",
          .methods = &camera_module_methods,
          .dso = NULL,
          .reserved = {0},
@@ -177,7 +178,7 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
 
     info->facing = vendor_camera_info.facing;
     info->orientation = vendor_camera_info.orientation;
-    info->device_version = vendor_camera_info.device_version;
+    info->device_version = CAMERA_DEVICE_API_VERSION_3_2;
 
     if (vendorInfo[camera_id] == 0 ) {
         vendorInfo[camera_id] = (camera_metadata_t*)vendor_camera_info.static_camera_characteristics;

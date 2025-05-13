@@ -26,7 +26,7 @@ LOCAL_SRC_FILES:= \
         camera/CameraUtils.cpp \
         camera/VendorTagDescriptor.cpp \
         camera/CameraParameters.cpp \
-       # sensor.c \
+        sensor.c \
         camera.c
 
 
@@ -38,13 +38,18 @@ LOCAL_SHARED_LIBRARIES := \
         libhardware \
         libui \
         libgui \
-        libcamera_metadata
+        libcamera_metadata \
+        libhidltransport \
+        libsensor \
+	android.hidl.token@1.0-utils \
+	android.hardware.graphics.bufferqueue@1.0
 
 LOCAL_C_INCLUDES += \
         $(LOCAL_PATH)/camera/include \
         system/media/camera/include \
         system/media/private/camera/include
 
+LOCAL_HEADER_LIBRARIES := libnativebase_headers
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 LOCAL_MODULE := libmocha_camera
 LOCAL_MODULE_TAGS := optional
@@ -57,7 +62,6 @@ LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 LOCAL_MODULE := libmocha_omx
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
-
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := powerservice_client.c 
