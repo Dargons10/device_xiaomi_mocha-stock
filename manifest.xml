@@ -32,10 +32,9 @@
         <version>2.4</version>
         <interface>
             <name>ICameraProvider</name>
-            <instance>default/0</instance>
+	    <instance>legacy/0</instance>
         </interface>
-        <fqname>@2.4::ICameraProvider/legacy/0</fqname>
-    </hal>
+     </hal>
      <hal format="hidl">
         <name>android.hardware.configstore</name>
         <transport>hwbinder</transport>
