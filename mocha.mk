@@ -14,6 +14,9 @@
 # limitations under the License.
 #
 $(call inherit-product, frameworks/native/build/phone-xxhdpi-2048-dalvik-heap.mk)
+
+LOCAL_PATH := device/xiaomi/mocha
+
 $(call inherit-product-if-exists, vendor/xiaomi/mocha/mocha-vendor.mk)
 $(call inherit-product-if-exists, vendor/xiaomi/mocha/consolemode-blobs.mk)
 
@@ -25,9 +28,9 @@ TARGET_TEGRA_VERSION := t124
 
 # Audio
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/audio/audio_policy.conf:system/etc/audio_policy.conf \
-    device/xiaomi/mocha/audio/audio.mocha.xml:system/etc/audio.mocha.xml \
-    device/xiaomi/mocha/audio/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml
+    $(LOCAL_PATH)/audio/audio_policy.conf:system/etc/audio_policy.conf \
+    $(LOCAL_PATH)/audio/audio.mocha.xml:system/etc/audio.mocha.xml \
+    $(LOCAL_PATH)/audio/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml
 
 PRODUCT_PACKAGES += \
     android.hardware.audio@2.0-impl \
@@ -51,8 +54,8 @@ PRODUCT_PACKAGES += \
 
 # Bluetooth
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/bluetooth/bt_vendor.conf:system/etc/bluetooth/bt_vendor.conf \
-    device/xiaomi/mocha/rootdir/etc/init.btloader.sh:system/bin/init.btloader.sh
+    $(LOCAL_PATH)/bluetooth/bt_vendor.conf:system/etc/bluetooth/bt_vendor.conf \
+    $(LOCAL_PATH)/rootdir/etc/init.btloader.sh:system/bin/init.btloader.sh
 
 PRODUCT_PACKAGES += \
     libbt-vendor \
@@ -61,8 +64,8 @@ PRODUCT_PACKAGES += \
 
 # Camera
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/camera/nvcamera.conf:system/etc/nvcamera.conf \
-    device/xiaomi/mocha/camera/model_frontal.xml:system/etc/model_frontal.xml
+    $(LOCAL_PATH)/camera/nvcamera.conf:system/etc/nvcamera.conf \
+    $(LOCAL_PATH)/camera/model_frontal.xml:system/etc/model_frontal.xml
 
 PRODUCT_PACKAGES += \
     android.hardware.camera.provider@2.4-impl-legacy \
@@ -142,9 +145,9 @@ PRODUCT_PACKAGES += \
 
 # keylayout
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/keylayout/tegra-kbc.kl:system/usr/keylayout/tegra-kbc.kl \
-    device/xiaomi/mocha/keylayout/gpio-keys.kl:system/usr/keylayout/gpio-keys.kl \
-    device/xiaomi/mocha/keylayout/Vendor_0955_Product_7210.kl:system/usr/keylayout/Vendor_0955_Product_7210.kl
+    $(LOCAL_PATH)/keylayout/tegra-kbc.kl:system/usr/keylayout/tegra-kbc.kl \
+    $(LOCAL_PATH)/keylayout/gpio-keys.kl:system/usr/keylayout/gpio-keys.kl \
+    $(LOCAL_PATH)/keylayout/Vendor_0955_Product_7210.kl:system/usr/keylayout/Vendor_0955_Product_7210.kl
 
 # Light
 PRODUCT_PACKAGES += \
@@ -152,15 +155,16 @@ PRODUCT_PACKAGES += \
         
 # Manifest HIDL
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/manifest.xml:system/vendor/manifest.xml
+    $(LOCAL_PATH)/manifest.xml:system/vendor/manifest.xml
 
 # Media config
 PRODUCT_COPY_FILES += \
     frameworks/av/media/libstagefright/data/media_codecs_google_audio.xml:system/etc/media_codecs_google_audio.xml \
     frameworks/av/media/libstagefright/data/media_codecs_google_video.xml:system/etc/media_codecs_google_video.xml \
-    device/xiaomi/mocha/media/media_codecs.xml:system/etc/media_codecs.xml \
-    device/xiaomi/mocha/media/media_profiles.xml:system/etc/media_profiles.xml \
-    device/xiaomi/mocha/media/media_codecs_performance.xml:system/etc/media_codecs_performance.xml
+    $(LOCAL_PATH)/media/media_codecs.xml:system/etc/media_codecs.xml \
+    $(LOCAL_PATH)/media/media_profiles.xml:system/etc/media_profiles.xml \
+    $(LOCAL_PATH)/media/media_codecs_performance.xml:system/etc/media_codecs_performance.xml
+
 PRODUCT_PACKAGES += \
     android.hardware.media.omx@1.0-impl \
     android.hardware.media.omx@1.0-service
@@ -180,13 +184,13 @@ PRODUCT_PACKAGES += \
 
 # NVIDIA
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/permissions/com.nvidia.blakemanager.xml:system/etc/permissions/com.nvidia.blakemanager.xml \
-    device/xiaomi/mocha/permissions/com.nvidia.feature.xml:system/etc/permissions/com.nvidia.feature.xml \
-    device/xiaomi/mocha/permissions/com.nvidia.nvsi.xml:system/etc/permissions/com.nvidia.nvsi.xml
+    $(LOCAL_PATH)/permissions/com.nvidia.blakemanager.xml:system/etc/permissions/com.nvidia.blakemanager.xml \
+    $(LOCAL_PATH)/permissions/com.nvidia.feature.xml:system/etc/permissions/com.nvidia.feature.xml \
+    $(LOCAL_PATH)/permissions/com.nvidia.nvsi.xml:system/etc/permissions/com.nvidia.nvsi.xml
 
 # Overlay
 DEVICE_PACKAGE_OVERLAYS += \
-    device/xiaomi/mocha/overlay
+    $(LOCAL_PATH)/overlay
 
 # Permissions
 PRODUCT_COPY_FILES += \
@@ -241,12 +245,12 @@ PRODUCT_PACKAGES += \
 
 #Renderer
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/rootdir/etc/init.renderer.sh:system/bin/init.renderer.sh
+    $(LOCAL_PATH)/rootdir/etc/init.renderer.sh:system/bin/init.renderer.sh
 
 # Seccomp
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/seccomp/mediacodec.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
-    device/xiaomi/mocha/seccomp/mediaextractor.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediaextractor.policy
+    $(LOCAL_PATH)/seccomp/mediacodec.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
+    $(LOCAL_PATH)/seccomp/mediaextractor.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediaextractor.policy
 
 # Sensors
 PRODUCT_PACKAGES += \
@@ -255,7 +259,7 @@ PRODUCT_PACKAGES += \
     sensors.tegra
 
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/sensors/etc/hals.conf:system/etc/sensors/hals.conf
+    $(LOCAL_PATH)/sensors/etc/hals.conf:system/etc/sensors/hals.conf
 
 # Shims
 PRODUCT_PACKAGES += \
@@ -274,7 +278,7 @@ PRODUCT_COPY_FILES += \
     prebuilts/ndk/current/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_shared.so:system/lib/libstlport.so
 
 # System Properties
--include device/xiaomi/mocha/system_prop.mk
+-include $(LOCAL_PATH)/system_prop.mk
 
 # Thermal
 PRODUCT_PACKAGES += \
@@ -291,7 +295,7 @@ PRODUCT_PACKAGES += \
 
 # Wifi
 PRODUCT_COPY_FILES += \
-    device/xiaomi/mocha/wifi/dhcpcd.conf:system/etc/dhcpcd/dhcpcd.conf 
+    $(LOCAL_PATH)/wifi/dhcpcd.conf:system/etc/dhcpcd/dhcpcd.conf 
 
 # Wifi
 # All Shield devices xurrently use broadcom wifi / bluetooth modules
