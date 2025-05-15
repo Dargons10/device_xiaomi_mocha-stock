@@ -65,9 +65,8 @@ PRODUCT_COPY_FILES += \
     device/xiaomi/mocha/camera/model_frontal.xml:system/etc/model_frontal.xml
 
 PRODUCT_PACKAGES += \
-    android.hardware.camera.provider@2.4-impl \
-    andorid.hardware.camera.provider@2.4-service \
-    camera.device@3.2-impl \
+    android.hardware.camera.provider@2.4-impl-legacy \
+    camera.device@3.2-impl-legacy \
     camera.tegra \
     libmocha_camera \
     libmocha_omx \
