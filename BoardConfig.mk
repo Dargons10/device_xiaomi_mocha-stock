@@ -158,6 +158,7 @@ TARGET_LD_SHIM_LIBS := \
     /system/lib/libutils.so|libshim_utils.so
 
 # SELinux
+SELINUX_IGNORE_NEVERALLOWS := true
 BOARD_SEPOLICY_DIRS += device/xiaomi/mocha/sepolicy/common \
                        device/xiaomi/mocha/sepolicy/lineage-common \
                        device/xiaomi/mocha/sepolicy/mocha
