@@ -1496,7 +1496,7 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
     }
 
     if (rsp->frames_in == 0) {
-        rsp->read_status = pcm_readi(in->pcm,
+        rsp->read_status = pcm_read(in->pcm,
                                    (void*)rsp->buffer,
                                    pcm_bytes_to_frames(in->pcm, rsp->in_buffer_size));
         if (rsp->read_status < 0) {
@@ -2163,7 +2163,7 @@ static ssize_t do_in_pcm_read(struct audio_stream_in *stream, void* buffer,
     if (in->resampler.resampler != NULL) {
         ret = read_resampled_frames(in, buffer, frames_rq);
     } else {
-        ret = pcm_readi(in->pcm, buffer, pcm_bytes_to_frames(in->pcm, bytes));
+        ret = pcm_read(in->pcm, buffer, pcm_bytes_to_frames(in->pcm, bytes));
     }
 
     /* Assume any non-negative return is a successful read */
