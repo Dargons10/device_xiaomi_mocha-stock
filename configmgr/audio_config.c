@@ -2298,11 +2298,11 @@ static int open_config_file(struct parse_state *state, char *file)
 
     if (file == NULL) {
         property_get("ro.product.device", property, "generic");
-        snprintf(name, sizeof(name), "/system/etc/audio.%s.xml", property);
+        snprintf(name, sizeof(name), "/vendor/etc/audio.%s.xml", property);
         snprintf(cur_file, sizeof(cur_file), "audio.%s.xml", property);
         state->cur_xml_file = strdup(cur_file);
     } else {
-        snprintf(name, sizeof(name), "/system/etc/%s", file);
+        snprintf(name, sizeof(name), "/vendor/etc/%s", file);
         state->cur_xml_file = strdup(file);
     }
 
