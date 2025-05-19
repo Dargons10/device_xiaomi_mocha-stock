@@ -777,7 +777,7 @@ static ssize_t out_pcm_write(struct audio_stream_out *stream, const void* buffer
         out->common.standby = false;
     }
 
-    ret = pcm_writei(out->pcm, buffer, pcm_bytes_to_frames(out->pcm, bytes));
+    ret = pcm_write(out->pcm, buffer, pcm_bytes_to_frames(out->pcm, bytes));
     if (ret >= 0) {
         ret = bytes;
     }
