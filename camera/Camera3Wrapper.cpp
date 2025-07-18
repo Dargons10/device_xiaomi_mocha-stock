@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012, The CyanogenMod Project
+ * Copyright (C) 2017, The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +53,15 @@ static int check_vendor_module()
 }
 
 /*******************************************************************
+ * Camera3 wrapper fixup functions
+ *******************************************************************/
+
+static const camera_metadata_t * camera3_fixup_construct_default_request_settings(android::CameraMetadata metadata)
+{
+    return metadata.release();
+}
+
+/*******************************************************************
  * implementation of camera_device_ops functions
  *******************************************************************/
 
@@ -96,7 +106,9 @@ static const camera_metadata_t *camera3_construct_default_request_settings(const
     if (!device)
         return NULL;
 
-    return VENDOR_CALL(device, construct_default_request_settings, type);
+    android::CameraMetadata metadata;
+    metadata = VENDOR_CALL(device, construct_default_request_settings, type);
+    return camera3_fixup_construct_default_request_settings(metadata);
 }
 
 static int camera3_process_capture_request(const camera3_device_t *device, camera3_capture_request_t *request)
@@ -232,7 +244,7 @@ int camera3_device_open(const hw_module_t *module, const char *name,
         memset(camera3_ops, 0, sizeof(*camera3_ops));
 
         camera3_device->base.common.tag = HARDWARE_DEVICE_TAG;
-        camera3_device->base.common.version = CAMERA_DEVICE_API_VERSION_3_2;
+        camera3_device->base.common.version = CAMERA_DEVICE_API_VERSION_3_0;
         camera3_device->base.common.module = (hw_module_t *)(module);
         camera3_device->base.common.close = camera3_device_close;
         camera3_device->base.ops = camera3_ops;

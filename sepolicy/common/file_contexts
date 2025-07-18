@@ -33,7 +33,9 @@
 /dev/nvhost-ctrl-isp.*			u:object_r:camera_device:s0
 /dev/nvhost-isp.*			u:object_r:camera_device:s0
 /dev/nvhost-msenc			u:object_r:camera_device:s0
+/dev/imx179		       	u:object_r:camera_device:s0
 /dev/focuser				u:object_r:camera_device:s0
+/dev/ov5693    			u:object_r:camera_device:s0
 /dev/torch.*				u:object_r:camera_device:s0
 /dev/mipi-cal				u:object_r:camera_device:s0
 /dev/tegra_camera_ctrl			u:object_r:camera_device:s0

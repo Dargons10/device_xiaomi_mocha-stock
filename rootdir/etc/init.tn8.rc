@@ -53,7 +53,6 @@ service init_renderer /sytem/bin/init.renderer.sh
     user root
     oneshot
 
-
 service media /system/bin/mediaserver
     class main
     user media

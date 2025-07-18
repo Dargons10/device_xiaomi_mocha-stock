@@ -124,7 +124,7 @@ static struct hw_module_methods_t camera_module_methods = {
 camera_module_t HAL_MODULE_INFO_SYM = {
     .common = {
          .tag = HARDWARE_MODULE_TAG,
-         .module_api_version = CAMERA_MODULE_API_VERSION_2_4,
+         .module_api_version = CAMERA_MODULE_API_VERSION_2_3,
          .hal_api_version = HARDWARE_HAL_API_VERSION,
          .id = CAMERA_HARDWARE_MODULE_ID,
          .name = "MI PAD Camera Wrapper",
@@ -137,7 +137,7 @@ camera_module_t HAL_MODULE_INFO_SYM = {
     .get_camera_info = camera_get_camera_info,
     .set_callbacks = camera_set_callbacks,
     .get_vendor_tag_ops = camera_get_vendor_tag_ops,
-    .open_legacy = camera_open_legacy,
+    .open_legacy = NULL,
     .set_torch_mode = NULL,
     .init = NULL,
     .reserved = {0},
@@ -178,7 +178,7 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
 
     info->facing = vendor_camera_info.facing;
     info->orientation = vendor_camera_info.orientation;
-    info->device_version = CAMERA_DEVICE_API_VERSION_3_2;
+    info->device_version = vendor_camera_info.device_version;
 
     if (vendorInfo[camera_id] == 0 ) {
         vendorInfo[camera_id] = (camera_metadata_t*)vendor_camera_info.static_camera_characteristics;

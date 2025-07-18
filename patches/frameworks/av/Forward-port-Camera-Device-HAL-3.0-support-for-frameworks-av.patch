@@ -1,0 +1,898 @@
+diff --git a/services/camera/libcameraservice/CameraService.cpp b/services/camera/libcameraservice/CameraService.cpp
+index 3755d55cd..d4bc51cfd 100644
+--- a/services/camera/libcameraservice/CameraService.cpp
++++ b/services/camera/libcameraservice/CameraService.cpp
+@@ -437,6 +437,9 @@ void CameraService::onTorchStatusChangedLocked(const String8& cameraId,
+ Status CameraService::getNumberOfCameras(int32_t type, int32_t* numCameras) {
+     ATRACE_CALL();
+     Mutex::Autolock l(mServiceLock);
++    //For DEBUG
++    ALOGW("%s: mocha: getNumberOfCameras camera type %d, backward compatible: %d, all: %d",
++        __FUNCTION__, type, mNumberOfNormalCameras, mNumberOfCameras);
+     switch (type) {
+         case CAMERA_TYPE_BACKWARD_COMPATIBLE:
+             *numCameras = mNumberOfNormalCameras;
+diff --git a/services/camera/libcameraservice/api1/client2/FrameProcessor.cpp b/services/camera/libcameraservice/api1/client2/FrameProcessor.cpp
+index 6e211267e..733a78ef6 100644
+--- a/services/camera/libcameraservice/api1/client2/FrameProcessor.cpp
++++ b/services/camera/libcameraservice/api1/client2/FrameProcessor.cpp
+@@ -41,7 +41,11 @@ FrameProcessor::FrameProcessor(wp<CameraDeviceBase> device,
+     {
+         SharedParameters::Lock l(client->getParameters());
+ 
+-        mUsePartialResult = (mNumPartialResults > 1);
++        if (client->getCameraDeviceVersion() >= CAMERA_DEVICE_API_VERSION_3_2) {
++            mUsePartialResult = (mNumPartialResults > 1);
++        } else {
++            mUsePartialResult = l.mParameters.quirks.partialResults;
++        }
+ 
+         // Initialize starting 3A state
+         m3aState.afTriggerId = l.mParameters.afTriggerCounter;
+@@ -72,7 +76,16 @@ bool FrameProcessor::processSingleFrame(CaptureResult &frame,
+ 
+     bool isPartialResult = false;
+     if (mUsePartialResult) {
+-        isPartialResult = frame.mResultExtras.partialResultCount < mNumPartialResults;
++        if (client->getCameraDeviceVersion() >= CAMERA_DEVICE_API_VERSION_3_2) {
++            isPartialResult = frame.mResultExtras.partialResultCount < mNumPartialResults;
++        } else {
++            camera_metadata_entry_t entry;
++            entry = frame.mMetadata.find(ANDROID_QUIRKS_PARTIAL_RESULT);
++            if (entry.count > 0 &&
++                    entry.data.u8[0] == ANDROID_QUIRKS_PARTIAL_RESULT_PARTIAL) {
++                isPartialResult = true;
++            }
++        }
+     }
+ 
+     if (!isPartialResult && processFaceDetect(frame.mMetadata, client) != OK) {
+@@ -278,8 +291,16 @@ status_t FrameProcessor::process3aState(const CaptureResult &frame,
+     gotAllStates &= updatePendingState<uint8_t>(metadata, ANDROID_CONTROL_AWB_STATE,
+             &pendingState.awbState, frameNumber, cameraId);
+ 
+-    pendingState.afTriggerId = frame.mResultExtras.afTriggerId;
+-    pendingState.aeTriggerId = frame.mResultExtras.precaptureTriggerId;
++    if (client->getCameraDeviceVersion() >= CAMERA_DEVICE_API_VERSION_3_2) {
++        pendingState.afTriggerId = frame.mResultExtras.afTriggerId;
++        pendingState.aeTriggerId = frame.mResultExtras.precaptureTriggerId;
++    } else {
++        gotAllStates &= updatePendingState<int32_t>(metadata,
++                ANDROID_CONTROL_AF_TRIGGER_ID, &pendingState.afTriggerId, frameNumber, cameraId);
++
++        gotAllStates &= updatePendingState<int32_t>(metadata,
++            ANDROID_CONTROL_AE_PRECAPTURE_ID, &pendingState.aeTriggerId, frameNumber, cameraId);
++    }
+ 
+     if (!gotAllStates) {
+         // If not all states are received, put the pending state to mPending3AStates.
+diff --git a/services/camera/libcameraservice/api1/client2/Parameters.cpp b/services/camera/libcameraservice/api1/client2/Parameters.cpp
+index 6fb5c214d..c867006c5 100644
+--- a/services/camera/libcameraservice/api1/client2/Parameters.cpp
++++ b/services/camera/libcameraservice/api1/client2/Parameters.cpp
+@@ -2856,14 +2856,32 @@ status_t Parameters::getFilteredSizes(Size limit, Vector<Size> *sizes) {
+     }
+     sizes->clear();
+ 
+-    Vector<StreamConfiguration> scs = getStreamConfigurations();
+-    for (size_t i=0; i < scs.size(); i++) {
+-        const StreamConfiguration &sc = scs[i];
+-        if (sc.isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
+-                sc.format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED &&
+-                sc.width <= limit.width && sc.height <= limit.height) {
+-            Size sz = {sc.width, sc.height};
+-            sizes->push(sz);
++    if (mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2) {
++        Vector<StreamConfiguration> scs = getStreamConfigurations();
++        for (size_t i=0; i < scs.size(); i++) {
++            const StreamConfiguration &sc = scs[i];
++            if (sc.isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
++                    sc.format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED &&
++                    sc.width <= limit.width && sc.height <= limit.height) {
++                Size sz = {sc.width, sc.height};
++                sizes->push(sz);
++            }
++        }
++    } else {
++        const size_t SIZE_COUNT = sizeof(Size) / sizeof(int);
++        camera_metadata_ro_entry_t availableProcessedSizes =
++            staticInfo(ANDROID_SCALER_AVAILABLE_PROCESSED_SIZES, SIZE_COUNT);
++        if (availableProcessedSizes.count < SIZE_COUNT) return BAD_VALUE;
++
++        Size filteredSize;
++        for (size_t i = 0; i < availableProcessedSizes.count; i += SIZE_COUNT) {
++            filteredSize.width = availableProcessedSizes.data.i32[i];
++            filteredSize.height = availableProcessedSizes.data.i32[i+1];
++                // Need skip the preview sizes that are too large.
++                if (filteredSize.width <= limit.width &&
++                        filteredSize.height <= limit.height) {
++                    sizes->push(filteredSize);
++                }
+         }
+     }
+ 
+@@ -2918,6 +2936,10 @@ Vector<Parameters::StreamConfiguration> Parameters::getStreamConfigurations() {
+     const int STREAM_HEIGHT_OFFSET = 2;
+     const int STREAM_IS_INPUT_OFFSET = 3;
+     Vector<StreamConfiguration> scs;
++    if (mDeviceVersion < CAMERA_DEVICE_API_VERSION_3_2) {
++        ALOGE("StreamConfiguration is only valid after device HAL 3.2!");
++        return scs;
++    }
+ 
+     camera_metadata_ro_entry_t availableStreamConfigs =
+                 staticInfo(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
+@@ -2933,10 +2955,37 @@ Vector<Parameters::StreamConfiguration> Parameters::getStreamConfigurations() {
+ }
+ 
+ int64_t Parameters::getJpegStreamMinFrameDurationNs(Parameters::Size size) {
+-    return getMinFrameDurationNs(size, HAL_PIXEL_FORMAT_BLOB);
++    if (mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2) {
++        return getMinFrameDurationNs(size, HAL_PIXEL_FORMAT_BLOB);
++    } else {
++        Vector<Size> availableJpegSizes = getAvailableJpegSizes();
++        size_t streamIdx = availableJpegSizes.size();
++        for (size_t i = 0; i < availableJpegSizes.size(); i++) {
++            if (availableJpegSizes[i].width == size.width &&
++                    availableJpegSizes[i].height == size.height) {
++                streamIdx = i;
++                break;
++            }
++        }
++        if (streamIdx != availableJpegSizes.size()) {
++            camera_metadata_ro_entry_t jpegMinDurations =
++                    staticInfo(ANDROID_SCALER_AVAILABLE_JPEG_MIN_DURATIONS);
++            if (streamIdx < jpegMinDurations.count) {
++                return jpegMinDurations.data.i64[streamIdx];
++            }
++        }
++    }
++    ALOGE("%s: cannot find min frame duration for jpeg size %dx%d",
++            __FUNCTION__, size.width, size.height);
++    return -1;
+ }
+ 
+ int64_t Parameters::getMinFrameDurationNs(Parameters::Size size, int fmt) {
++    if (mDeviceVersion < CAMERA_DEVICE_API_VERSION_3_2) {
++        ALOGE("Min frame duration for HAL 3.1 or lower is not supported");
++        return -1;
++    }
++
+     const int STREAM_DURATION_SIZE = 4;
+     const int STREAM_FORMAT_OFFSET = 0;
+     const int STREAM_WIDTH_OFFSET = 1;
+@@ -2958,6 +3007,11 @@ int64_t Parameters::getMinFrameDurationNs(Parameters::Size size, int fmt) {
+ }
+ 
+ bool Parameters::isFpsSupported(const Vector<Size> &sizes, int format, int32_t fps) {
++    // Skip the check for older HAL version, as the min duration is not supported.
++    if (mDeviceVersion < CAMERA_DEVICE_API_VERSION_3_2) {
++        return true;
++    }
++
+     // Get min frame duration for each size and check if the given fps range can be supported.
+     for (size_t i = 0 ; i < sizes.size(); i++) {
+         int64_t minFrameDuration = getMinFrameDurationNs(sizes[i], format);
+@@ -2978,11 +3032,18 @@ bool Parameters::isFpsSupported(const Vector<Size> &sizes, int format, int32_t f
+ 
+ SortedVector<int32_t> Parameters::getAvailableOutputFormats() {
+     SortedVector<int32_t> outputFormats; // Non-duplicated output formats
+-    Vector<StreamConfiguration> scs = getStreamConfigurations();
+-    for (size_t i = 0; i < scs.size(); i++) {
+-        const StreamConfiguration &sc = scs[i];
+-        if (sc.isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT) {
+-            outputFormats.add(sc.format);
++    if (mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2) {
++        Vector<StreamConfiguration> scs = getStreamConfigurations();
++        for (size_t i = 0; i < scs.size(); i++) {
++            const StreamConfiguration &sc = scs[i];
++            if (sc.isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT) {
++                outputFormats.add(sc.format);
++            }
++        }
++    } else {
++        camera_metadata_ro_entry_t availableFormats = staticInfo(ANDROID_SCALER_AVAILABLE_FORMATS);
++        for (size_t i = 0; i < availableFormats.count; i++) {
++            outputFormats.add(availableFormats.data.i32[i]);
+         }
+     }
+ 
+@@ -2991,12 +3052,26 @@ SortedVector<int32_t> Parameters::getAvailableOutputFormats() {
+ 
+ Vector<Parameters::Size> Parameters::getAvailableJpegSizes() {
+     Vector<Parameters::Size> jpegSizes;
+-    Vector<StreamConfiguration> scs = getStreamConfigurations();
+-    for (size_t i = 0; i < scs.size(); i++) {
+-        const StreamConfiguration &sc = scs[i];
+-        if (sc.isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
+-                sc.format == HAL_PIXEL_FORMAT_BLOB) {
+-            Size sz = {sc.width, sc.height};
++    if (mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2) {
++        Vector<StreamConfiguration> scs = getStreamConfigurations();
++        for (size_t i = 0; i < scs.size(); i++) {
++            const StreamConfiguration &sc = scs[i];
++            if (sc.isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
++                    sc.format == HAL_PIXEL_FORMAT_BLOB) {
++                Size sz = {sc.width, sc.height};
++                jpegSizes.add(sz);
++            }
++        }
++    } else {
++        const int JPEG_SIZE_ENTRY_COUNT = 2;
++        const int WIDTH_OFFSET = 0;
++        const int HEIGHT_OFFSET = 1;
++        camera_metadata_ro_entry_t availableJpegSizes =
++            staticInfo(ANDROID_SCALER_AVAILABLE_JPEG_SIZES);
++        for (size_t i = 0; i < availableJpegSizes.count; i+= JPEG_SIZE_ENTRY_COUNT) {
++            int width = availableJpegSizes.data.i32[i + WIDTH_OFFSET];
++            int height = availableJpegSizes.data.i32[i + HEIGHT_OFFSET];
++            Size sz = {width, height};
+             jpegSizes.add(sz);
+         }
+     }
+diff --git a/services/camera/libcameraservice/api1/client2/StreamingProcessor.cpp b/services/camera/libcameraservice/api1/client2/StreamingProcessor.cpp
+index 73dca7310..dad93f662 100644
+--- a/services/camera/libcameraservice/api1/client2/StreamingProcessor.cpp
++++ b/services/camera/libcameraservice/api1/client2/StreamingProcessor.cpp
+@@ -114,11 +114,16 @@ status_t StreamingProcessor::updatePreviewRequest(const Parameters &params) {
+         }
+ 
+         // Use CAMERA3_TEMPLATE_ZERO_SHUTTER_LAG for ZSL streaming case.
+-        if (params.useZeroShutterLag() && !params.recordingHint) {
+-            res = device->createDefaultRequest(
+-                    CAMERA3_TEMPLATE_ZERO_SHUTTER_LAG, &mPreviewRequest);
++        if (client->getCameraDeviceVersion() >= CAMERA_DEVICE_API_VERSION_3_0) {
++            if (params.useZeroShutterLag() && !params.recordingHint) {
++                res = device->createDefaultRequest(CAMERA3_TEMPLATE_ZERO_SHUTTER_LAG,
++                        &mPreviewRequest);
++            } else {
++                res = device->createDefaultRequest(CAMERA3_TEMPLATE_PREVIEW,
++                        &mPreviewRequest);
++            }
+         } else {
+-            res = device->createDefaultRequest(CAMERA3_TEMPLATE_PREVIEW,
++            res = device->createDefaultRequest(CAMERA2_TEMPLATE_PREVIEW,
+                     &mPreviewRequest);
+         }
+ 
+diff --git a/services/camera/libcameraservice/common/CameraDeviceBase.h b/services/camera/libcameraservice/common/CameraDeviceBase.h
+index a90050e1b..9a093da06 100644
+--- a/services/camera/libcameraservice/common/CameraDeviceBase.h
++++ b/services/camera/libcameraservice/common/CameraDeviceBase.h
+@@ -343,6 +343,11 @@ class CameraDeviceBase : public virtual RefBase {
+      */
+     virtual status_t prepare(int maxCount, int streamId) = 0;
+ 
++    /**
++     * Get the HAL device version.
++     */
++    virtual uint32_t getDeviceVersion() = 0;
++
+     /**
+      * Set the deferred consumer surface and finish the rest of the stream configuration.
+      */
+diff --git a/services/camera/libcameraservice/common/CameraProviderManager.cpp b/services/camera/libcameraservice/common/CameraProviderManager.cpp
+index e6a6a210f..245371e85 100644
+--- a/services/camera/libcameraservice/common/CameraProviderManager.cpp
++++ b/services/camera/libcameraservice/common/CameraProviderManager.cpp
+@@ -998,6 +998,9 @@ status_t CameraProviderManager::ProviderInfo::DeviceInfo3::getCameraInfo(
+ }
+ bool CameraProviderManager::ProviderInfo::DeviceInfo3::isAPI1Compatible() const {
+     bool isBackwardCompatible = false;
++    //Follow Android N, assume all devices pre-v3.3 are backward-compatible
++    if (mVersion.get_minor() < 3)
++        return true;
+     camera_metadata_ro_entry_t caps = mCameraCharacteristics.find(
+             ANDROID_REQUEST_AVAILABLE_CAPABILITIES);
+     for (size_t i = 0; i < caps.count; i++) {
+diff --git a/services/camera/libcameraservice/common/FrameProcessorBase.cpp b/services/camera/libcameraservice/common/FrameProcessorBase.cpp
+index 41c953bbe..9e78f8882 100644
+--- a/services/camera/libcameraservice/common/FrameProcessorBase.cpp
++++ b/services/camera/libcameraservice/common/FrameProcessorBase.cpp
+@@ -32,7 +32,8 @@ FrameProcessorBase::FrameProcessorBase(wp<CameraDeviceBase> device) :
+     mDevice(device),
+     mNumPartialResults(1) {
+     sp<CameraDeviceBase> cameraDevice = device.promote();
+-    if (cameraDevice != 0) {
++    if (cameraDevice != 0 &&
++            cameraDevice->getDeviceVersion() >= CAMERA_DEVICE_API_VERSION_3_2) {
+         CameraMetadata staticInfo = cameraDevice->info();
+         camera_metadata_entry_t entry = staticInfo.find(ANDROID_REQUEST_PARTIAL_RESULT_COUNT);
+         if (entry.count > 0) {
+@@ -170,8 +171,18 @@ status_t FrameProcessorBase::processListeners(const CaptureResult &result,
+     camera_metadata_ro_entry_t entry;
+ 
+     // Check if this result is partial.
+-    bool isPartialResult =
+-            result.mResultExtras.partialResultCount < mNumPartialResults;
++    bool isPartialResult = false;
++    if (device->getDeviceVersion() >= CAMERA_DEVICE_API_VERSION_3_2) {
++        isPartialResult = result.mResultExtras.partialResultCount < mNumPartialResults;
++    } else {
++        entry = result.mMetadata.find(ANDROID_QUIRKS_PARTIAL_RESULT);
++        if (entry.count != 0 &&
++                entry.data.u8[0] == ANDROID_QUIRKS_PARTIAL_RESULT_PARTIAL) {
++            ALOGV("%s: Camera %s: This is a partial result",
++                    __FUNCTION__, device->getId().string());
++            isPartialResult = true;
++        }
++    }
+ 
+     // TODO: instead of getting requestID from CameraMetadata, we should get it
+     // from CaptureResultExtras. This will require changing Camera2Device.
+diff --git a/services/camera/libcameraservice/device3/Camera3Device.cpp b/services/camera/libcameraservice/device3/Camera3Device.cpp
+index a980cde23..b453f3558 100644
+--- a/services/camera/libcameraservice/device3/Camera3Device.cpp
++++ b/services/camera/libcameraservice/device3/Camera3Device.cpp
+@@ -219,12 +219,30 @@ status_t Camera3Device::initializeCommonLocked() {
+         mTimestampOffset = getMonoToBoottimeOffset();
+     }
+ 
++    // Before using mDeviceVersion, initialize it first
++    res = mInterface->getDeviceVersion(&mDeviceVersion);
++    if (res != OK) {
++        SET_ERR_L("Unable to get Device Version: %s (%d)",
++                strerror(-res), res);
++        mInterface->close();
++        mRequestThread.clear();
++        return res;
++    }
++
+     // Will the HAL be sending in early partial result metadata?
+-    camera_metadata_entry partialResultsCount =
+-            mDeviceInfo.find(ANDROID_REQUEST_PARTIAL_RESULT_COUNT);
+-    if (partialResultsCount.count > 0) {
+-        mNumPartialResults = partialResultsCount.data.i32[0];
+-        mUsePartialResult = (mNumPartialResults > 1);
++    if (mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2) {
++        camera_metadata_entry partialResultsCount =
++                mDeviceInfo.find(ANDROID_REQUEST_PARTIAL_RESULT_COUNT);
++        if (partialResultsCount.count > 0) {
++            mNumPartialResults = partialResultsCount.data.i32[0];
++            mUsePartialResult = (mNumPartialResults > 1);
++        }
++    } else {
++        camera_metadata_entry partialResultsQuirk =
++                mDeviceInfo.find(ANDROID_QUIRKS_USE_PARTIAL_RESULT);
++        if (partialResultsQuirk.count > 0 && partialResultsQuirk.data.u8[0] == 1) {
++            mUsePartialResult = true;
++        }
+     }
+ 
+     camera_metadata_entry configs =
+@@ -358,29 +376,46 @@ bool Camera3Device::tryLockSpinRightRound(Mutex& lock) {
+ 
+ Camera3Device::Size Camera3Device::getMaxJpegResolution() const {
+     int32_t maxJpegWidth = 0, maxJpegHeight = 0;
+-    const int STREAM_CONFIGURATION_SIZE = 4;
+-    const int STREAM_FORMAT_OFFSET = 0;
+-    const int STREAM_WIDTH_OFFSET = 1;
+-    const int STREAM_HEIGHT_OFFSET = 2;
+-    const int STREAM_IS_INPUT_OFFSET = 3;
+-    camera_metadata_ro_entry_t availableStreamConfigs =
+-            mDeviceInfo.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
+-    if (availableStreamConfigs.count == 0 ||
+-            availableStreamConfigs.count % STREAM_CONFIGURATION_SIZE != 0) {
+-        return Size(0, 0);
+-    }
+-
+-    // Get max jpeg size (area-wise).
+-    for (size_t i=0; i < availableStreamConfigs.count; i+= STREAM_CONFIGURATION_SIZE) {
+-        int32_t format = availableStreamConfigs.data.i32[i + STREAM_FORMAT_OFFSET];
+-        int32_t width = availableStreamConfigs.data.i32[i + STREAM_WIDTH_OFFSET];
+-        int32_t height = availableStreamConfigs.data.i32[i + STREAM_HEIGHT_OFFSET];
+-        int32_t isInput = availableStreamConfigs.data.i32[i + STREAM_IS_INPUT_OFFSET];
+-        if (isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT
+-                && format == HAL_PIXEL_FORMAT_BLOB &&
+-                (width * height > maxJpegWidth * maxJpegHeight)) {
+-            maxJpegWidth = width;
+-            maxJpegHeight = height;
++    if (mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2) {
++        const int STREAM_CONFIGURATION_SIZE = 4;
++        const int STREAM_FORMAT_OFFSET = 0;
++        const int STREAM_WIDTH_OFFSET = 1;
++        const int STREAM_HEIGHT_OFFSET = 2;
++        const int STREAM_IS_INPUT_OFFSET = 3;
++        camera_metadata_ro_entry_t availableStreamConfigs =
++                mDeviceInfo.find(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS);
++        if (availableStreamConfigs.count == 0 ||
++                availableStreamConfigs.count % STREAM_CONFIGURATION_SIZE != 0) {
++            return Size(0, 0);
++        }
++
++        // Get max jpeg size (area-wise).
++        for (size_t i=0; i < availableStreamConfigs.count; i+= STREAM_CONFIGURATION_SIZE) {
++            int32_t format = availableStreamConfigs.data.i32[i + STREAM_FORMAT_OFFSET];
++            int32_t width = availableStreamConfigs.data.i32[i + STREAM_WIDTH_OFFSET];
++            int32_t height = availableStreamConfigs.data.i32[i + STREAM_HEIGHT_OFFSET];
++            int32_t isInput = availableStreamConfigs.data.i32[i + STREAM_IS_INPUT_OFFSET];
++            if (isInput == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT
++                    && format == HAL_PIXEL_FORMAT_BLOB &&
++                    (width * height > maxJpegWidth * maxJpegHeight)) {
++                maxJpegWidth = width;
++                maxJpegHeight = height;
++            }
++        }
++    } else {
++        camera_metadata_ro_entry availableJpegSizes =
++                mDeviceInfo.find(ANDROID_SCALER_AVAILABLE_JPEG_SIZES);
++        if (availableJpegSizes.count == 0 || availableJpegSizes.count % 2 != 0) {
++            return Size(0, 0);
++        }
++
++        // Get max jpeg size (area-wise).
++        for (size_t i = 0; i < availableJpegSizes.count; i += 2) {
++            if ((availableJpegSizes.data.i32[i] * availableJpegSizes.data.i32[i + 1])
++                    > (maxJpegWidth * maxJpegHeight)) {
++                maxJpegWidth = availableJpegSizes.data.i32[i];
++                maxJpegHeight = availableJpegSizes.data.i32[i + 1];
++            }
+         }
+     }
+ 
+@@ -1279,11 +1314,21 @@ status_t Camera3Device::createStream(const std::vector<sp<Surface>>& consumers,
+     assert(mStatus != STATUS_ACTIVE);
+ 
+     sp<Camera3OutputStream> newStream;
+-
++    // Overwrite stream set id to invalid for HAL3.2 or lower, as buffer manager does support
++    // such devices.
++    if (mDeviceVersion <= CAMERA_DEVICE_API_VERSION_3_2) {
++        streamSetId = CAMERA3_STREAM_SET_ID_INVALID;
++    }
+     if (consumers.size() == 0 && !hasDeferredConsumer) {
+         ALOGE("%s: Number of consumers cannot be smaller than 1", __FUNCTION__);
+         return BAD_VALUE;
+     }
++    // HAL3.1 doesn't support deferred consumer stream creation as it requires buffer registration
++    // which requires a consumer surface to be available.
++    if (hasDeferredConsumer && mDeviceVersion < CAMERA_DEVICE_API_VERSION_3_2) {
++        ALOGE("HAL3.1 doesn't support deferred consumer stream creation");
++        return BAD_VALUE;
++    }
+ 
+     if (hasDeferredConsumer && format != HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
+         ALOGE("Deferred consumer stream creation only support IMPLEMENTATION_DEFINED format");
+@@ -1822,7 +1867,15 @@ status_t Camera3Device::flush(int64_t *frameNumber) {
+         mRequestThread->clear(/*out*/frameNumber);
+     }
+ 
+-    return mRequestThread->flush();
++    status_t res;
++    if (mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_1) {
++        res = mRequestThread->flush();
++    } else {
++        Mutex::Autolock l(mLock);
++        res = waitUntilDrained();
++    }
++
++    return res;
+ }
+ 
+ status_t Camera3Device::prepare(int streamId) {
+@@ -1835,6 +1888,14 @@ status_t Camera3Device::prepare(int maxCount, int streamId) {
+     Mutex::Autolock il(mInterfaceLock);
+     Mutex::Autolock l(mLock);
+ 
++    // Teardown can only be accomplished on devices that don't require register_stream_buffers,
++    // since we cannot call register_stream_buffers except right after configure_streams.
++    if (mDeviceVersion < CAMERA_DEVICE_API_VERSION_3_2) {
++        ALOGE("%s: Unable to tear down streams on device HAL v%x",
++                __FUNCTION__, mDeviceVersion);
++        return NO_INIT;
++    }
++
+     sp<Camera3StreamInterface> stream;
+     ssize_t outputStreamIdx = mOutputStreams.indexOfKey(streamId);
+     if (outputStreamIdx == NAME_NOT_FOUND) {
+@@ -1900,6 +1961,12 @@ status_t Camera3Device::addBufferListenerForStream(int streamId,
+     return OK;
+ }
+ 
++uint32_t Camera3Device::getDeviceVersion() {
++    ATRACE_CALL();
++    Mutex::Autolock il(mInterfaceLock);
++    return mDeviceVersion;
++}
++
+ /**
+  * Methods called by subclasses
+  */
+@@ -1966,7 +2033,9 @@ status_t Camera3Device::setConsumerSurfaces(int streamId,
+             return INVALID_OPERATION;
+         }
+ 
+-        res = stream->finishConfiguration();
++        res = stream->finishConfiguration([this](camera3_stream_buffer_set *bufferSet) -> int {
++            return this->mInterface->registerStreamBuffers(bufferSet);
++        }, mDeviceVersion);
+         if (res != OK) {
+             SET_ERR_L("Can't finish configuring output stream %d: %s (%d)",
+                    stream->getId(), strerror(-res), res);
+@@ -2015,7 +2084,9 @@ sp<Camera3Device::CaptureRequest> Camera3Device::createCaptureRequest(
+         // Lazy completion of stream configuration (allocation/registration)
+         // on first use
+         if (mInputStream->isConfiguring()) {
+-            res = mInputStream->finishConfiguration();
++            res = mInputStream->finishConfiguration([this](camera3_stream_buffer_set *bufferSet) -> int {
++                return this->mInterface->registerStreamBuffers(bufferSet);
++            }, mDeviceVersion);
+             if (res != OK) {
+                 SET_ERR_L("Unable to finish configuring input stream %d:"
+                         " %s (%d)",
+@@ -2067,7 +2138,9 @@ sp<Camera3Device::CaptureRequest> Camera3Device::createCaptureRequest(
+         // Lazy completion of stream configuration (allocation/registration)
+         // on first use
+         if (stream->isConfiguring()) {
+-            res = stream->finishConfiguration();
++            res = stream->finishConfiguration([this](camera3_stream_buffer_set *bufferSet) -> int {
++                return this->mInterface->registerStreamBuffers(bufferSet);
++            }, mDeviceVersion);
+             if (res != OK) {
+                 SET_ERR_L("Unable to finish configuring stream %d: %s (%d)",
+                         stream->getId(), strerror(-res), res);
+@@ -2231,7 +2304,9 @@ status_t Camera3Device::configureStreamsLocked(int operatingMode) {
+     // faster
+ 
+     if (mInputStream != NULL && mInputStream->isConfiguring()) {
+-        res = mInputStream->finishConfiguration();
++        res = mInputStream->finishConfiguration([this](camera3_stream_buffer_set *bufferSet) -> int {
++            return this->mInterface->registerStreamBuffers(bufferSet);
++        }, mDeviceVersion);
+         if (res != OK) {
+             CLOGE("Can't finish configuring input stream %d: %s (%d)",
+                     mInputStream->getId(), strerror(-res), res);
+@@ -2244,7 +2319,9 @@ status_t Camera3Device::configureStreamsLocked(int operatingMode) {
+         sp<Camera3OutputStreamInterface> outputStream =
+             mOutputStreams.editValueAt(i);
+         if (outputStream->isConfiguring() && !outputStream->isConsumerConfigurationDeferred()) {
+-            res = outputStream->finishConfiguration();
++            res = outputStream->finishConfiguration([this](camera3_stream_buffer_set *bufferSet) -> int {
++                return this->mInterface->registerStreamBuffers(bufferSet);
++            }, mDeviceVersion);
+             if (res != OK) {
+                 CLOGE("Can't finish configuring output stream %d: %s (%d)",
+                         outputStream->getId(), strerror(-res), res);
+@@ -2725,7 +2802,10 @@ void Camera3Device::processCaptureResult(const camera3_capture_result *result) {
+         return;
+     }
+ 
++    // For HAL3.2 or above, If HAL doesn't support partial, it must always set
++    // partial_result to 1 when metadata is included in this result.
+     if (!mUsePartialResult &&
++            mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2 &&
+             result->result != NULL &&
+             result->partial_result != 1) {
+         SET_ERR("Result is malformed for frame %d: partial_result %u must be 1"
+@@ -2770,15 +2850,33 @@ void Camera3Device::processCaptureResult(const camera3_capture_result *result) {
+ 
+         // Check if this result carries only partial metadata
+         if (mUsePartialResult && result->result != NULL) {
+-            if (result->partial_result > mNumPartialResults || result->partial_result < 1) {
+-                SET_ERR("Result is malformed for frame %d: partial_result %u must be  in"
+-                        " the range of [1, %d] when metadata is included in the result",
+-                        frameNumber, result->partial_result, mNumPartialResults);
+-                return;
+-            }
+-            isPartialResult = (result->partial_result < mNumPartialResults);
+-            if (isPartialResult) {
+-                request.collectedPartialResult.append(result->result);
++            if (mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2) {
++                if (result->partial_result > mNumPartialResults || result->partial_result < 1) {
++                    SET_ERR("Result is malformed for frame %d: partial_result %u must be  in"
++                            " the range of [1, %d] when metadata is included in the result",
++                            frameNumber, result->partial_result, mNumPartialResults);
++                    return;
++                }
++                isPartialResult = (result->partial_result < mNumPartialResults);
++                if (isPartialResult) {
++                    request.collectedPartialResult.append(result->result);
++                }
++            } else {
++                camera_metadata_ro_entry_t partialResultEntry;
++                res = find_camera_metadata_ro_entry(result->result,
++                        ANDROID_QUIRKS_PARTIAL_RESULT, &partialResultEntry);
++                if (res != NAME_NOT_FOUND &&
++                        partialResultEntry.count > 0 &&
++                        partialResultEntry.data.u8[0] ==
++                        ANDROID_QUIRKS_PARTIAL_RESULT_PARTIAL) {
++                    // A partial result. Flag this as such, and collect this
++                    // set of metadata into the in-flight entry.
++                    isPartialResult = true;
++                    request.collectedPartialResult.append(
++                        result->result);
++                    request.collectedPartialResult.erase(
++                        ANDROID_QUIRKS_PARTIAL_RESULT);
++                }
+             }
+ 
+             if (isPartialResult && request.hasCallback) {
+@@ -3524,6 +3622,76 @@ status_t Camera3Device::HalInterface::flush() {
+     return res;
+ }
+ 
++status_t Camera3Device::HalInterface::getDeviceVersion(/*out*/uint32_t* deviceVersion) {
++    ATRACE_NAME("CameraHal::getDeviceVersion");
++    if (!valid()) return INVALID_OPERATION;
++    status_t res = OK;
++
++    uint32_t version = mHidlSession->getDeviceVersion();
++    if (!version) {
++        ALOGE("%s: Transaction error, version: %x", __FUNCTION__, version);
++        res = DEAD_OBJECT;
++    } else {
++        *deviceVersion = version;
++    }
++
++    return res;
++}
++
++status_t Camera3Device::HalInterface::registerStreamBuffers(camera3_stream_buffer_set* bufferSet) {
++    ATRACE_NAME("CameraHal::registerStreamBuffers");
++    if (!valid()) return INVALID_OPERATION;
++    status_t res = OK;
++
++    // Convert stream buffer set to HIDL
++    StreamBufferSet hidlBufferSet;
++    hidlBufferSet.buffers.resize(bufferSet->num_buffers);
++
++    Stream &dst = hidlBufferSet.stream; //hidl stream is not a pointer
++    Camera3Stream *cam3stream = Camera3Stream::cast(bufferSet->stream);
++    cam3stream->setBufferFreedListener(this);
++    int streamId = cam3stream->getId();
++    StreamType streamType;
++    switch (bufferSet->stream->stream_type) {
++        case CAMERA3_STREAM_OUTPUT:
++            streamType = StreamType::OUTPUT;
++            break;
++        case CAMERA3_STREAM_INPUT:
++            streamType = StreamType::INPUT;
++            break;
++        default:
++            //TODO: BIDIRECTIONAL is not supported.
++            ALOGE("%s: Stream %d: Unsupported stream type %d",
++                    __FUNCTION__, streamId, bufferSet->stream->stream_type);
++            return BAD_VALUE;
++    }
++    dst.id = streamId;
++    dst.streamType = streamType;
++    dst.width = bufferSet->stream->width;
++    dst.height = bufferSet->stream->height;
++    dst.format = mapToPixelFormat(bufferSet->stream->format);
++    dst.usage = mapToConsumerUsage(cam3stream->getUsage());
++    dst.dataSpace = mapToHidlDataspace(bufferSet->stream->data_space);
++    dst.rotation = mapToStreamRotation((camera3_stream_rotation_t) bufferSet->stream->rotation);
++
++    hidlBufferSet.numBuffers = bufferSet->num_buffers;
++
++    for (size_t i = 0; i < bufferSet->num_buffers; i++) {
++        //these buffer is in the stream buffer, the buffers[] contains the ptrs of handle
++        hidlBufferSet.buffers[i] = *(bufferSet->buffers[i]);
++    }
++
++    auto err = mHidlSession->registerStreamBuffers(hidlBufferSet);
++    if (!err.isOk()) {
++        ALOGE("%s: Transaction error: %s", __FUNCTION__, err.description().c_str());
++        res = DEAD_OBJECT;
++    } else {
++        res = CameraProviderManager::mapToStatusT(err);
++    }
++
++    return res;
++}
++
+ status_t Camera3Device::HalInterface::dump(int /*fd*/) {
+     ATRACE_NAME("CameraHal::dump");
+     if (!valid()) return INVALID_OPERATION;
+@@ -3853,7 +4021,17 @@ status_t Camera3Device::RequestThread::flush() {
+     ATRACE_CALL();
+     Mutex::Autolock l(mFlushLock);
+ 
+-    return mInterface->flush();
++    sp<Camera3Device> parent = mParent.promote();
++    if (parent == NULL) {
++        // Should not happen, and nowhere to send errors to, so just log it
++        CLOGE("RequestThread: Parent is gone");
++        return INVALID_OPERATION;
++    }
++    if (parent->mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_1) {
++        return mInterface->flush();
++    }
++
++    return -ENOTSUP;
+ }
+ 
+ void Camera3Device::RequestThread::setPaused(bool paused) {
+@@ -4662,7 +4840,9 @@ status_t Camera3Device::RequestThread::insertTriggers(
+                 request->mResultExtras.afTriggerId = triggerId;
+                 mCurrentAfTriggerId = triggerId;
+             }
+-            continue;
++            if (parent->mDeviceVersion >= CAMERA_DEVICE_API_VERSION_3_2) {
++                continue; // Trigger ID tag is deprecated since device HAL 3.2
++            }
+         }
+ 
+         camera_metadata_entry entry = metadata.find(tag);
+diff --git a/services/camera/libcameraservice/device3/Camera3Device.h b/services/camera/libcameraservice/device3/Camera3Device.h
+index 081af1978..63c54a347 100644
+--- a/services/camera/libcameraservice/device3/Camera3Device.h
++++ b/services/camera/libcameraservice/device3/Camera3Device.h
+@@ -165,6 +165,8 @@ class Camera3Device :
+ 
+     status_t prepare(int maxCount, int streamId) override;
+ 
++    uint32_t getDeviceVersion() override;
++
+     ssize_t getJpegBufferSize(uint32_t width, uint32_t height) const override;
+     ssize_t getPointCloudBufferSize() const;
+     ssize_t getRawOpaqueBufferSize(int32_t width, int32_t height) const;
+@@ -264,6 +266,8 @@ class Camera3Device :
+                 std::vector<camera3_capture_request_t*>& requests,
+                 /*out*/uint32_t* numRequestProcessed);
+         status_t flush();
++        status_t getDeviceVersion(/*out*/uint32_t *deviceVersion);
++        status_t registerStreamBuffers(camera3_stream_buffer_set *bufferSet);
+         status_t dump(int fd);
+         status_t close();
+ 
+@@ -343,6 +347,7 @@ class Camera3Device :
+     };
+ 
+     sp<HalInterface> mInterface;
++    uint32_t         mDeviceVersion;
+ 
+     CameraMetadata             mDeviceInfo;
+ 
+diff --git a/services/camera/libcameraservice/device3/Camera3Stream.cpp b/services/camera/libcameraservice/device3/Camera3Stream.cpp
+index fbe8f4fcf..8765d6c87 100644
+--- a/services/camera/libcameraservice/device3/Camera3Stream.cpp
++++ b/services/camera/libcameraservice/device3/Camera3Stream.cpp
+@@ -203,7 +203,8 @@ bool Camera3Stream::isConfiguring() const {
+     return (mState == STATE_IN_CONFIG) || (mState == STATE_IN_RECONFIG);
+ }
+ 
+-status_t Camera3Stream::finishConfiguration() {
++status_t Camera3Stream::finishConfiguration(const std::function<int(camera3_stream_buffer_set*)> &callback,
++                                         int deviceVersion) {
+     ATRACE_CALL();
+     Mutex::Autolock l(mLock);
+     switch (mState) {
+@@ -255,6 +256,16 @@ status_t Camera3Stream::finishConfiguration() {
+ 
+     mState = STATE_CONFIGURED;
+ 
++    if (deviceVersion < CAMERA_DEVICE_API_VERSION_3_2){
++        res = registerBuffersLocked(callback);
++        if (res != OK) {
++            ALOGE("%s: Unable to register stream buffers with HAL: %s (%d)",
++                    __FUNCTION__, strerror(-res), res);
++            mState = STATE_ERROR;
++            return res;
++        }
++    }
++
+     return res;
+ }
+ 
+@@ -721,6 +732,68 @@ void Camera3Stream::dump(int fd, const Vector<String16> &args) const
+             "      Latency histogram for wait on max_buffers");
+ }
+ 
++status_t Camera3Stream::registerBuffersLocked(const std::function<int(camera3_stream_buffer_set*)> &callback) {
++    ATRACE_CALL();
++
++    ALOGV("%s: register_stream_buffers using deprecated code path", __FUNCTION__);
++
++    status_t res;
++
++    size_t bufferCount = getBufferCountLocked();
++
++    Vector<buffer_handle_t*> buffers;
++    buffers.insertAt(/*prototype_item*/NULL, /*index*/0, bufferCount);
++
++    camera3_stream_buffer_set bufferSet = camera3_stream_buffer_set();
++    bufferSet.stream = this;
++    bufferSet.num_buffers = bufferCount;
++    bufferSet.buffers = buffers.editArray();
++
++    Vector<camera3_stream_buffer_t> streamBuffers;
++    streamBuffers.insertAt(camera3_stream_buffer_t(), /*index*/0, bufferCount);
++
++    // Register all buffers with the HAL. This means getting all the buffers
++    // from the stream, providing them to the HAL with the
++    // register_stream_buffers() method, and then returning them back to the
++    // stream in the error state, since they won't have valid data.
++    //
++    // Only registered buffers can be sent to the HAL.
++
++    uint32_t bufferIdx = 0;
++    for (; bufferIdx < bufferCount; bufferIdx++) {
++        res = getBufferLocked( &streamBuffers.editItemAt(bufferIdx) );
++        if (res != OK) {
++            ALOGE("%s: Unable to get buffer %d for registration with HAL",
++                    __FUNCTION__, bufferIdx);
++            // Skip registering, go straight to cleanup
++            break;
++        }
++
++        sp<Fence> fence = new Fence(streamBuffers[bufferIdx].acquire_fence);
++        fence->waitForever("Camera3Stream::registerBuffers");
++
++        buffers.editItemAt(bufferIdx) = streamBuffers[bufferIdx].buffer;
++    }
++    if (bufferIdx == bufferCount) {
++        // Got all buffers, register with HAL
++        ALOGV("%s: Registering %zu buffers with camera HIDL register_stream_buffers callback",
++                __FUNCTION__, bufferCount);
++        res = callback(&bufferSet);
++    }
++
++    // Return all valid buffers to stream, in ERROR state to indicate
++    // they weren't filled.
++    for (size_t i = 0; i < bufferIdx; i++) {
++        streamBuffers.editItemAt(i).release_fence = -1;
++        streamBuffers.editItemAt(i).status = CAMERA3_BUFFER_STATUS_ERROR;
++        returnBufferLocked(streamBuffers[i], 0);
++    }
++
++    mPrepared = true;
++
++    return res;
++}
++
+ status_t Camera3Stream::getBufferLocked(camera3_stream_buffer *,
+         const std::vector<size_t>&) {
+     ALOGE("%s: This type of stream does not support output", __FUNCTION__);
+diff --git a/services/camera/libcameraservice/device3/Camera3Stream.h b/services/camera/libcameraservice/device3/Camera3Stream.h
+index 6e7912ec5..64541cea4 100644
+--- a/services/camera/libcameraservice/device3/Camera3Stream.h
++++ b/services/camera/libcameraservice/device3/Camera3Stream.h
+@@ -190,7 +190,8 @@ class Camera3Stream :
+      *   INVALID_OPERATION in case connecting to the consumer failed or consumer
+      *       doesn't exist yet.
+      */
+-    status_t         finishConfiguration();
++    status_t         finishConfiguration(const std::function<int(camera3_stream_buffer_set*)> &callback,
++                                         int deviceVersion);
+ 
+     /**
+      * Cancels the stream configuration process. This returns the stream to the
+@@ -490,6 +491,10 @@ class Camera3Stream :
+     Condition mInputBufferReturnedSignal;
+     static const nsecs_t kWaitForBufferDuration = 3000000000LL; // 3000 ms
+ 
++    // Gets all buffers from endpoint and registers them with the HAL.
++    // use callback to call deprecated function from hidl
++    status_t registerBuffersLocked(const std::function<int(camera3_stream_buffer_set*)> &callback);
++
+     void fireBufferListenersLocked(const camera3_stream_buffer& buffer,
+                                   bool acquired, bool output);
+     List<wp<Camera3StreamBufferListener> > mBufferListenerList;
+diff --git a/services/camera/libcameraservice/device3/Camera3StreamInterface.h b/services/camera/libcameraservice/device3/Camera3StreamInterface.h
+index cc9bf8e4b..d1946100b 100644
+--- a/services/camera/libcameraservice/device3/Camera3StreamInterface.h
++++ b/services/camera/libcameraservice/device3/Camera3StreamInterface.h
+@@ -18,10 +18,12 @@
+ #define ANDROID_SERVERS_CAMERA3_STREAM_INTERFACE_H
+ 
+ #include <utils/RefBase.h>
++#include <functional>
+ #include "Camera3StreamBufferListener.h"
+ #include "Camera3StreamBufferFreedListener.h"
+ 
+ struct camera3_stream_buffer;
++struct camera3_stream_buffer_set;
+ 
+ namespace android {
+ 
+@@ -116,7 +118,8 @@ class Camera3StreamInterface : public virtual RefBase {
+      *   NO_MEMORY in case of an error registering buffers
+      *   INVALID_OPERATION in case connecting to the consumer failed
+      */
+-    virtual status_t finishConfiguration() = 0;
++    virtual status_t finishConfiguration(const std::function<int(camera3_stream_buffer_set*)> &callback,
++                                         int deviceVersion) = 0;
+ 
+     /**
+      * Cancels the stream configuration process. This returns the stream to the

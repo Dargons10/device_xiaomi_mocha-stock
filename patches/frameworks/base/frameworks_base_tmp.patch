@@ -1,0 +1,132 @@
+diff --git a/core/java/android/hardware/camera2/CameraManager.java b/core/java/android/hardware/camera2/CameraManager.java
+index 39efa2b8444..99d074a4cd0 100644
+--- a/core/java/android/hardware/camera2/CameraManager.java
++++ b/core/java/android/hardware/camera2/CameraManager.java
+@@ -55,7 +55,7 @@ import java.util.ArrayList;
+ public final class CameraManager {
+ 
+     private static final String TAG = "CameraManager";
+-    private final boolean DEBUG = false;
++    private final boolean DEBUG = true;
+ 
+     private static final int USE_CALLING_UID = -1;
+ 
+@@ -236,11 +236,13 @@ public final class CameraManager {
+                     CameraInfo info = cameraService.getCameraInfo(id);
+ 
+                     characteristics = LegacyMetadataMapper.createCharacteristics(parameters, info);
++                    Log.w(TAG, "mocha: getCameraCharacteristics create legacy parameters");
+                 } else {
+                     // Normal path: Get the camera characteristics directly from the camera service
+                     CameraMetadataNative info = cameraService.getCameraCharacteristics(cameraId);
+ 
+                     characteristics = new CameraCharacteristics(info);
++                    Log.w(TAG, "mocha: getCameraCharacteristics create normal parameters");
+                 }
+             } catch (ServiceSpecificException e) {
+                 throwAsPublicException(e);
+@@ -283,7 +285,7 @@ public final class CameraManager {
+         CameraDevice device = null;
+ 
+         synchronized (mLock) {
+-
++            Log.w(TAG, "mocha: openCameraDeviceUserAsync");
+             ICameraDeviceUser cameraUser = null;
+ 
+             android.hardware.camera2.impl.CameraDeviceImpl deviceImpl =
+@@ -305,6 +307,7 @@ public final class CameraManager {
+                             ICameraService.ERROR_DISCONNECTED,
+                             "Camera service is currently unavailable");
+                     }
++                    Log.w(TAG, "mocha: camera2api connect device");
+                     cameraUser = cameraService.connectDevice(callbacks, cameraId,
+                             mContext.getOpPackageName(), uid);
+                 } else {
+@@ -318,6 +321,7 @@ public final class CameraManager {
+                     }
+ 
+                     Log.i(TAG, "Using legacy camera HAL.");
++                    Log.w(TAG, "mocha: legacy way connect Binder Shim");
+                     cameraUser = CameraDeviceUserShim.connectBinderShim(callbacks, id);
+                 }
+             } catch (ServiceSpecificException e) {
+@@ -357,6 +361,9 @@ public final class CameraManager {
+             // onOpened/onUnconfigured callbacks.
+             // This function call may post onDisconnected and throw CAMERA_DISCONNECTED if
+             // cameraUser dies during setup.
++            if (cameraUser != null) {
++                Log.w(TAG, "mocha: got cameraUser");
++            }
+             deviceImpl.setRemoteDevice(cameraUser);
+             device = deviceImpl;
+         }
+@@ -430,7 +437,7 @@ public final class CameraManager {
+     public void openCamera(@NonNull String cameraId,
+             @NonNull final CameraDevice.StateCallback callback, @Nullable Handler handler)
+             throws CameraAccessException {
+-
++        Log.w(TAG, "mocha: openCamera");
+         openCameraForUid(cameraId, callback, handler, USE_CALLING_UID);
+     }
+ 
+@@ -701,6 +708,8 @@ public final class CameraManager {
+             // If no camera service, no support
+             if (cameraService == null) return false;
+ 
++            Log.w(TAG, "mocha: supportsCameraApiLocked got cameraService");
++
+             return cameraService.supportsCameraApi(cameraId, apiVersion);
+         } catch (RemoteException e) {
+             // Camera service is now down, no support for any API level
+@@ -822,6 +831,7 @@ public final class CameraManager {
+                     onStatusChangedLocked(c.status, c.cameraId);
+                 }
+                 mCameraService = cameraService;
++                Log.w(TAG, "mocha: connectCameraServiceLocked got cameraService");
+             } catch(ServiceSpecificException e) {
+                 // Unexpected failure
+                 throw new IllegalStateException("Failed to register a camera service listener", e);
+@@ -858,6 +868,7 @@ public final class CameraManager {
+                     cameraIds[idCount] = mDeviceStatus.keyAt(i);
+                     idCount++;
+                 }
++                Log.w(TAG, String.format("mocha: getCameraIdList idCount: %d", idCount));
+             }
+             return cameraIds;
+         }
+diff --git a/core/java/android/hardware/camera2/legacy/CameraDeviceUserShim.java b/core/java/android/hardware/camera2/legacy/CameraDeviceUserShim.java
+index 49d4096e3f3..7f286697484 100644
+--- a/core/java/android/hardware/camera2/legacy/CameraDeviceUserShim.java
++++ b/core/java/android/hardware/camera2/legacy/CameraDeviceUserShim.java
+@@ -64,7 +64,7 @@ import static android.system.OsConstants.ENODEV;
+ public class CameraDeviceUserShim implements ICameraDeviceUser {
+     private static final String TAG = "CameraDeviceUserShim";
+ 
+-    private static final boolean DEBUG = false;
++    private static final boolean DEBUG = true;
+     private static final int OPEN_CAMERA_TIMEOUT_MS = 5000; // 5 sec (same as api1 cts timeout)
+ 
+     private final LegacyCameraDevice mLegacyDevice;
+@@ -356,7 +356,7 @@ public class CameraDeviceUserShim implements ICameraDeviceUser {
+         if (DEBUG) {
+             Log.d(TAG, "Opening shim Camera device");
+         }
+-
++        Log.w(TAG, "mocha: Opening shim Camera device");
+         /*
+          * Put the camera open on a separate thread with its own looper; otherwise
+          * if the main thread is used then the callbacks might never get delivered
+@@ -388,10 +388,13 @@ public class CameraDeviceUserShim implements ICameraDeviceUser {
+                     "Unable to get initial parameters: " + e.getMessage());
+         }
+ 
++        Log.w(TAG, "mocha: ready to create Legacy device and characteristics");
++
+         CameraCharacteristics characteristics =
+                 LegacyMetadataMapper.createCharacteristics(legacyParameters, info);
+         LegacyCameraDevice device = new LegacyCameraDevice(
+                 cameraId, legacyCamera, characteristics, threadCallbacks);
++        Log.w(TAG, "mocha: ready to create CameraDeviceUserShim");
+         return new CameraDeviceUserShim(cameraId, device, characteristics, init, threadCallbacks);
+     }
+ 
