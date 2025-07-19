@@ -114,9 +114,11 @@ PRODUCT_PACKAGES += \
 
 # FM
 PRODUCT_PACKAGES += \
+    android.hardware.broadcastradio@1.0-impl \
     FMRadio \
     brcm-uim-sysfs \
-    libfmjni
+    libfmjni \
+    libfmradio.v4l2-fm
 
 # Gatekeeper
 PRODUCT_PACKAGES += \
