@@ -234,7 +234,7 @@ PRODUCT_COPY_FILES += \
 # Power
 PRODUCT_PACKAGES += \
     android.hardware.power@1.0-service.mocha \
-    power.tegra
+    vendor.lineage.power@1.0
 
 # Product
 PRODUCT_CHARACTERISTICS := tablet
