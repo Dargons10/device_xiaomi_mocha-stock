@@ -274,8 +274,6 @@ typeattribute property_socket mlstrustedobject;
 # /data/camera_config(/.*)?
 type camera_config_file, file_type, data_file_type;
 
-# /proc/version
-type proc_version, fs_type;
 
 # /data/system/devices/keylayout(/.*)?
 type keylayout_data_file, file_type, data_file_type;
