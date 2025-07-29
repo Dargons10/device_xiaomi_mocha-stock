@@ -6,11 +6,11 @@ LOCAL_MODULE := libshim_atomic
 LOCAL_MODULE_CLASS := SHARED_LIBRARIES
 include $(BUILD_SHARED_LIBRARY)
 
-include $(CLEAR_VARS)
-LOCAL_SRC_FILES := libshim_audio.cpp
-LOCAL_SHARED_LIBRARIES := libaudioclient libaudioprocessing
-LOCAL_MODULE := libshim_audio
-include $(BUILD_SHARED_LIBRARY)
+#include $(CLEAR_VARS)
+#LOCAL_SRC_FILES := libshim_audio.cpp
+#LOCAL_SHARED_LIBRARIES := libaudioclient libaudioprocessing
+#LOCAL_MODULE := libshim_audio
+#include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := libshim_binder.cpp binder/BnServiceManager.cpp
@@ -23,11 +23,11 @@ LOCAL_SRC_FILES := log2_kernel.c
 LOCAL_MODULE := libshim_bionic
 include $(BUILD_SHARED_LIBRARY)
 
-include $(CLEAR_VARS)
-LOCAL_SRC_FILES := libshim_gui.cpp
-LOCAL_SHARED_LIBRARIES := libgui libutils
-LOCAL_MODULE := libshim_gui
-include $(BUILD_SHARED_LIBRARY)
+#include $(CLEAR_VARS)
+#LOCAL_SRC_FILES := libshim_gui.cpp
+#LOCAL_SHARED_LIBRARIES := libgui libutils
+#LOCAL_MODULE := libshim_gui
+#include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_SRC_FILES := libshim_icuuc.cpp
