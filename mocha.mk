@@ -286,7 +286,7 @@ PRODUCT_PACKAGES += \
     libshim_utils
 
 #STLPORT
-PRODUCT_COPY_FILES += \
+#PRODUCT_COPY_FILES += \
     prebuilts/ndk/current/sources/cxx-stl/stlport/libs/armeabi-v7a/libstlport_shared.so:system/lib/libstlport.so
 
 # System Properties
