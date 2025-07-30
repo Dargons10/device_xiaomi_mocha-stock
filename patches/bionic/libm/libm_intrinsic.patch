@@ -11,3 +11,4 @@ index 7e3175ddb..f64060b09 100644
    global: # arm mips
      ___Unwind_Backtrace; # arm
      ___Unwind_ForcedUnwind; # arm
+

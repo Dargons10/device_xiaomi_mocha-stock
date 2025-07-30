@@ -12,3 +12,4 @@ index 4e5833ab1..440ff4464 100644
              EGLDisplay idpy = disp.dpy;
              if (cnx->egl.eglInitialize(idpy, &cnx->major, &cnx->minor)) {
                  //ALOGD("initialized dpy=%p, ver=%d.%d, cnx=%p",
+

@@ -15,3 +15,4 @@ index b26ad999042..4fa3182b709 100644
      private boolean mAnimationsDisabled = false;
  
      final InputManagerService mInputManager;
+
