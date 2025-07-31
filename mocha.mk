@@ -297,13 +297,14 @@ PRODUCT_PACKAGES += \
     android.hardware.thermal@1.0-impl \
     thermal.tn8
 
+# USB HAL
+PRODUCT_PACKAGES += \
+     android.hardware.usb@1.0-service.basic
+
+
 # Vibrator
 PRODUCT_PACKAGES += \
     android.hardware.vibrator@1.0-service.mocha
-
-# USB HAL
-PRODUCT_PACKAGES += \
-    android.hardware.usb@1.0-service
 
 # Wifi
 PRODUCT_COPY_FILES += \
