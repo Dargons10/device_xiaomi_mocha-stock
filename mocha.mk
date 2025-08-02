@@ -232,12 +232,10 @@ PRODUCT_COPY_FILES += \
 
 # Power
 PRODUCT_PACKAGES += \
-    android.hardware.power@1.0-service.mocha \
-    vendor.lineage.power@1.0
-
-# Product
-PRODUCT_CHARACTERISTICS := tablet
-
+android.hardware.power@1.0-service.mocha \
+android.hardware.vendor.lineage.power@1.0-impl \
+power.tegra
+   
 # Ramdisk
 PRODUCT_PACKAGES += \
     fstab.tn8 \
