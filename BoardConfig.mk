@@ -141,6 +141,9 @@ TARGET_RECOVERY_DEVICE_DIRS += $(LOCAL_PATH)
 TARGET_RECOVERY_FSTAB := $(LOCAL_PATH)/rootdir/etc/fstab.tn8
 BOARD_NO_SECURE_DISCARD := true
 
+# Security patch level
+VENDOR_SECURITY_PATCH := 2008-01-01
+
 # Shims
 TARGET_LD_SHIM_LIBS := \
     /system/vendor/lib/libnvomxadaptor.so|libmocha_omx.so \
@@ -178,3 +181,5 @@ WIFI_DRIVER_FW_PATH_PARAM        := "/sys/module/bcmdhd/parameters/firmware_path
 
 # Zygote whitelist extra paths
 ZYGOTE_WHITELIST_PATH_EXTRA := \"/dev/nvhost-ctrl\",\"/dev/nvmap\",
+
+
