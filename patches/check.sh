@@ -1,7 +1,7 @@
 #!/bin/sh
 
 rootdirectory="$PWD"
-dirs="system/core frameworks/native frameworks/base hardware/interfaces external/selinux bionic/libm"
+dirs="frameworks/native frameworks/base hardware/interfaces external/selinux bionic/libm"
 
 
 RED='\033[0;31m'
