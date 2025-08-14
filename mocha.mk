@@ -130,8 +130,7 @@ PRODUCT_PACKAGES += \
    android.hardware.graphics.mapper@2.0-impl \
    android.hardware.renderscript@1.0-impl \
    libs \
-   libshim_zw \
-   libshim_wvm
+   libshim_zw 
 
 # Health HAL
 PRODUCT_PACKAGES += \
