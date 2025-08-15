@@ -37,6 +37,8 @@ on init
     # create directory for mounting user calibration partition
     mkdir /mnt/usercalib 0771 system system
 
+   
+
     start watchdogd
 
 on fs
