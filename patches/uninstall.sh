@@ -1,7 +1,7 @@
 #!/bin/sh
 
 rootdirectory="$PWD"
-dirs="bionic/libm frameworks/av frameworks/native hardware/interfaces"
+dirs="bionic/libm frameworks/native"
 
 for dir in $dirs ; do
 	cd $rootdirectory
