@@ -190,7 +190,12 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
     info->device_version = normalize_camera_device_version(vendor_camera_info.device_version);
 
     if (vendorInfo[camera_id] == 0 ) {
-        vendorInfo[camera_id] = (camera_metadata_t*)vendor_camera_info.static_camera_characteristics;
+        vendorInfo[camera_id] = clone_camera_metadata(vendor_camera_info.static_camera_characteristics);
+        if (vendorInfo[camera_id] == NULL) {
+            ALOGE("%s: clone_camera_metadata failed for camera %d", __FUNCTION__, camera_id);
+            info->static_camera_characteristics = vendor_camera_info.static_camera_characteristics;
+            return ret;
+        }
 
         camera_metadata_entry_t found_entry;
         int rc = find_camera_metadata_entry(
