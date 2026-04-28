@@ -1,7 +1,7 @@
 #!/bin/sh
 
 rootdirectory="$PWD"
-dirs="bionic/libm frameworks/av frameworks/base frameworks/native hardware/interfaces"
+dirs="bionic/libm frameworks/av frameworks/native hardware/interfaces"
 
 RED='\033[0;31m'
 NC='\033[0m'
@@ -16,4 +16,3 @@ done
 # -----------------------------------
 echo -e "Done !\n"
 cd $rootdirectory
-
