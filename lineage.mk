@@ -8,7 +8,7 @@ TARGET_BOOTANIMATION_HALF_RES := true
 $(call inherit-product, vendor/lineage/config/common_mini_tablet_wifionly.mk)
 
 # Temporary: bypass SetupWizard until EGL stack is fully stable
-PRODUCT_PACKAGES -= LineageSetupWizard
+PRODUCT_PACKAGES := $(filter-out LineageSetupWizard,$(PRODUCT_PACKAGES))
 
 PRODUCT_NAME := lineage_mocha
 PRODUCT_DEVICE := mocha
