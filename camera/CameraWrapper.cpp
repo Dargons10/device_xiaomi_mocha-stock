@@ -112,6 +112,73 @@ static inline int normalize_camera_device_version(int version)
     return version;
 }
 
+static void ensure_stream_configurations(camera_metadata_t* metadata)
+{
+    if (metadata == NULL) {
+        return;
+    }
+
+    camera_metadata_entry_t stream_configs;
+    int rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+            &stream_configs);
+    if (rc == 0 && stream_configs.count >= 4 && (stream_configs.count % 4 == 0)) {
+        return;
+    }
+
+    camera_metadata_entry_t processed_sizes;
+    camera_metadata_entry_t jpeg_sizes;
+    int processed_rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_PROCESSED_SIZES,
+            &processed_sizes);
+    int jpeg_rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_JPEG_SIZES,
+            &jpeg_sizes);
+
+    if (processed_rc != 0 || jpeg_rc != 0 ||
+            processed_sizes.count < 2 || jpeg_sizes.count < 2 ||
+            (processed_sizes.count % 2) != 0 || (jpeg_sizes.count % 2) != 0) {
+        ALOGE("%s: cannot synthesize stream configurations", __FUNCTION__);
+        return;
+    }
+
+    if (rc == 0) {
+        delete_camera_metadata_entry(metadata, stream_configs.index);
+    }
+
+    const int32_t stream_field_count = 4;
+    const size_t processed_pair_count = processed_sizes.count / 2;
+    const size_t jpeg_pair_count = jpeg_sizes.count / 2;
+    const size_t total_stream_count = (processed_pair_count + jpeg_pair_count) * stream_field_count;
+
+    int32_t* synthesized = (int32_t*)calloc(total_stream_count, sizeof(int32_t));
+    if (synthesized == NULL) {
+        ALOGE("%s: failed to allocate synthesized stream configurations", __FUNCTION__);
+        return;
+    }
+
+    size_t out = 0;
+    for (size_t i = 0; i < processed_sizes.count; i += 2) {
+        synthesized[out++] = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
+        synthesized[out++] = processed_sizes.data.i32[i];
+        synthesized[out++] = processed_sizes.data.i32[i + 1];
+        synthesized[out++] = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT;
+    }
+
+    for (size_t i = 0; i < jpeg_sizes.count; i += 2) {
+        synthesized[out++] = HAL_PIXEL_FORMAT_BLOB;
+        synthesized[out++] = jpeg_sizes.data.i32[i];
+        synthesized[out++] = jpeg_sizes.data.i32[i + 1];
+        synthesized[out++] = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT;
+    }
+
+    add_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+            synthesized,
+            total_stream_count);
+    free(synthesized);
+}
+
 static int check_vendor_module()
 {
     int rv = 0;
@@ -205,6 +272,8 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
         if (rc == 0) {
             delete_camera_metadata_entry(vendorInfo[camera_id], found_entry.index);
         }
+
+        ensure_stream_configurations(vendorInfo[camera_id]);
     }
 
     info->static_camera_characteristics = vendorInfo[camera_id];
