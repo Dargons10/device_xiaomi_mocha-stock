@@ -103,6 +103,15 @@ static char prop[PROPERTY_VALUE_MAX];
 static camera_metadata_t* vendorInfo[2] = {0,0};
 static camera_info vendor_camera_info;
 
+static inline int normalize_camera_device_version(int version)
+{
+    if (version == CAMERA_DEVICE_API_VERSION_3_0) {
+        return CAMERA_DEVICE_API_VERSION_3_2;
+    }
+
+    return version;
+}
+
 static int check_vendor_module()
 {
     int rv = 0;
@@ -178,7 +187,7 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
 
     info->facing = vendor_camera_info.facing;
     info->orientation = vendor_camera_info.orientation;
-    info->device_version = vendor_camera_info.device_version;
+    info->device_version = normalize_camera_device_version(vendor_camera_info.device_version);
 
     if (vendorInfo[camera_id] == 0 ) {
         vendorInfo[camera_id] = (camera_metadata_t*)vendor_camera_info.static_camera_characteristics;
