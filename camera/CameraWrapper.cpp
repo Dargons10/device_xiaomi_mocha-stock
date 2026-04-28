@@ -112,10 +112,44 @@ static inline int normalize_camera_device_version(int version)
     return version;
 }
 
-static void ensure_stream_configurations(camera_metadata_t* metadata)
+static bool has_valid_stream_configurations(camera_metadata_t* metadata, int camera_id, const char* stage)
 {
     if (metadata == NULL) {
-        return;
+        ALOGE("%s[%s]: null metadata for camera %d", __FUNCTION__, stage, camera_id);
+        return false;
+    }
+
+    camera_metadata_entry_t stream_configs;
+    int rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+            &stream_configs);
+    if (rc != 0) {
+        ALOGE("%s[%s]: camera %d missing stream configurations", __FUNCTION__, stage, camera_id);
+        return false;
+    }
+
+    if (stream_configs.count < 4 || (stream_configs.count % 4) != 0) {
+        ALOGE("%s[%s]: camera %d invalid stream count=%u", __FUNCTION__, stage, camera_id, stream_configs.count);
+        return false;
+    }
+
+    for (size_t i = 0; i < stream_configs.count; i += 4) {
+        int32_t width = stream_configs.data.i32[i + 1];
+        int32_t height = stream_configs.data.i32[i + 2];
+        if (width <= 0 || height <= 0) {
+            ALOGE("%s[%s]: camera %d bad stream size %dx%d", __FUNCTION__, stage, camera_id, width, height);
+            return false;
+        }
+    }
+
+    ALOGI("%s[%s]: camera %d stream configurations count=%u", __FUNCTION__, stage, camera_id, stream_configs.count);
+    return true;
+}
+
+static bool ensure_stream_configurations(camera_metadata_t* metadata, int camera_id)
+{
+    if (metadata == NULL) {
+        return false;
     }
 
     camera_metadata_entry_t stream_configs;
@@ -123,7 +157,7 @@ static void ensure_stream_configurations(camera_metadata_t* metadata)
             ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
             &stream_configs);
     if (rc == 0 && stream_configs.count >= 4 && (stream_configs.count % 4 == 0)) {
-        return;
+        return has_valid_stream_configurations(metadata, camera_id, "existing");
     }
 
     camera_metadata_entry_t processed_sizes;
@@ -138,8 +172,8 @@ static void ensure_stream_configurations(camera_metadata_t* metadata)
     if (processed_rc != 0 || jpeg_rc != 0 ||
             processed_sizes.count < 2 || jpeg_sizes.count < 2 ||
             (processed_sizes.count % 2) != 0 || (jpeg_sizes.count % 2) != 0) {
-        ALOGE("%s: cannot synthesize stream configurations", __FUNCTION__);
-        return;
+        ALOGE("%s: cannot synthesize stream configurations for camera %d", __FUNCTION__, camera_id);
+        return false;
     }
 
     if (rc == 0) {
@@ -154,11 +188,14 @@ static void ensure_stream_configurations(camera_metadata_t* metadata)
     int32_t* synthesized = (int32_t*)calloc(total_stream_count, sizeof(int32_t));
     if (synthesized == NULL) {
         ALOGE("%s: failed to allocate synthesized stream configurations", __FUNCTION__);
-        return;
+        return false;
     }
 
     size_t out = 0;
     for (size_t i = 0; i < processed_sizes.count; i += 2) {
+        if (processed_sizes.data.i32[i] <= 0 || processed_sizes.data.i32[i + 1] <= 0) {
+            continue;
+        }
         synthesized[out++] = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
         synthesized[out++] = processed_sizes.data.i32[i];
         synthesized[out++] = processed_sizes.data.i32[i + 1];
@@ -166,17 +203,33 @@ static void ensure_stream_configurations(camera_metadata_t* metadata)
     }
 
     for (size_t i = 0; i < jpeg_sizes.count; i += 2) {
+        if (jpeg_sizes.data.i32[i] <= 0 || jpeg_sizes.data.i32[i + 1] <= 0) {
+            continue;
+        }
         synthesized[out++] = HAL_PIXEL_FORMAT_BLOB;
         synthesized[out++] = jpeg_sizes.data.i32[i];
         synthesized[out++] = jpeg_sizes.data.i32[i + 1];
         synthesized[out++] = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT;
     }
 
-    add_camera_metadata_entry(metadata,
+    if (out < 4 || (out % 4) != 0) {
+        ALOGE("%s: synthesized stream configurations invalid for camera %d", __FUNCTION__, camera_id);
+        free(synthesized);
+        return false;
+    }
+
+    int add_rc = add_camera_metadata_entry(metadata,
             ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
             synthesized,
-            total_stream_count);
+            out);
     free(synthesized);
+
+    if (add_rc != 0) {
+        ALOGE("%s: failed adding synthesized stream configurations for camera %d", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    return has_valid_stream_configurations(metadata, camera_id, "synthesized");
 }
 
 static int check_vendor_module()
@@ -264,6 +317,8 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
             return ret;
         }
 
+        camera_metadata_t* metadata_backup = clone_camera_metadata(vendorInfo[camera_id]);
+
         camera_metadata_entry_t found_entry;
         int rc = find_camera_metadata_entry(
                 vendorInfo[camera_id],
@@ -273,7 +328,20 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
             delete_camera_metadata_entry(vendorInfo[camera_id], found_entry.index);
         }
 
-        ensure_stream_configurations(vendorInfo[camera_id]);
+        if (!ensure_stream_configurations(vendorInfo[camera_id], camera_id)) {
+            ALOGE("%s: camera %d metadata sanitize failed, restoring backup", __FUNCTION__, camera_id);
+            if (metadata_backup != NULL) {
+                free_camera_metadata(vendorInfo[camera_id]);
+                vendorInfo[camera_id] = metadata_backup;
+                metadata_backup = NULL;
+            }
+        }
+
+        if (metadata_backup != NULL) {
+            free_camera_metadata(metadata_backup);
+        }
+
+        has_valid_stream_configurations(vendorInfo[camera_id], camera_id, "final");
     }
 
     info->static_camera_characteristics = vendorInfo[camera_id];
