@@ -49,7 +49,7 @@ on boot
     #change vm memory parameter
     write /proc/sys/vm/lowmem_reserve_ratio "128 128"
 
-service init_renderer /sytem/bin/init.renderer.sh
+service init_renderer /system/bin/init.renderer.sh
     user root
     oneshot
 

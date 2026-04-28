@@ -11,21 +11,18 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Didim
 PRODUCT_PROPERTY_OVERRIDES += \
-    persist.tegra.didim.enable = 1\
-    persist.tegra.didim.video = 5 \
-    persist.tegra.didim.normal = 3 
+    persist.tegra.didim.enable=1 \
+    persist.tegra.didim.video=5 \
+    persist.tegra.didim.normal=3
 
 # Graphics
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.sf.lcd_density=320 \
-    ro.opengles.version = 196609 \
+    ro.opengles.version=196609 \
     persist.tegra.compositor=surfaceflinger \
     ro.zygote.disable_gl_preload=true \
-    ro.sf.disable_triple_buffer=true\
+    ro.sf.disable_triple_buffer=true \
     persist.sys.ui.hw=true \
-    debug.sf.disable_backpressure=1 \
-    debug.sf.latch_unsignaled=1 \
-    debug.composition.type=gpu \
     debug.egl.hw=1 \
     debug.sf.hw=1
 	
@@ -35,7 +32,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Lineage genuine
 PRODUCT_PROPERTY_OVERRIDES += \
-    persist.lineage.nofool=true
+    persist.lineage.nofool=true \
+    ro.setupwizard.mode=DISABLED
 
 # LMKD options
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -50,7 +48,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Nvmm
 PRODUCT_PROPERTY_OVERRIDES += \
-    persist.tegra.nvmmlite = 1
+    persist.tegra.nvmmlite=1
 
 # OMX
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -92,5 +90,5 @@ PRODUCT_PROPERTY_OVERRIDES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     wifi.interface=wlan0 \
     ap.interface=wlan0 \
-    persist.wlan.ti.calibrated = 0 \
+    persist.wlan.ti.calibrated=0 \
     persist.debug.wfd.enable=1
