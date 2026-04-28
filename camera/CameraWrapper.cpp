@@ -317,8 +317,6 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
             return ret;
         }
 
-        camera_metadata_t* metadata_backup = clone_camera_metadata(vendorInfo[camera_id]);
-
         camera_metadata_entry_t found_entry;
         int rc = find_camera_metadata_entry(
                 vendorInfo[camera_id],
@@ -329,16 +327,7 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
         }
 
         if (!ensure_stream_configurations(vendorInfo[camera_id], camera_id)) {
-            ALOGE("%s: camera %d metadata sanitize failed, restoring backup", __FUNCTION__, camera_id);
-            if (metadata_backup != NULL) {
-                free_camera_metadata(vendorInfo[camera_id]);
-                vendorInfo[camera_id] = metadata_backup;
-                metadata_backup = NULL;
-            }
-        }
-
-        if (metadata_backup != NULL) {
-            free_camera_metadata(metadata_backup);
+            ALOGE("%s: camera %d stream synthesis failed, keeping high-speed cleanup", __FUNCTION__, camera_id);
         }
 
         has_valid_stream_configurations(vendorInfo[camera_id], camera_id, "final");
