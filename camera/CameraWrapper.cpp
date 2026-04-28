@@ -191,6 +191,15 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
 
     if (vendorInfo[camera_id] == 0 ) {
         vendorInfo[camera_id] = (camera_metadata_t*)vendor_camera_info.static_camera_characteristics;
+
+        camera_metadata_entry_t found_entry;
+        int rc = find_camera_metadata_entry(
+                vendorInfo[camera_id],
+                ANDROID_CONTROL_AVAILABLE_HIGH_SPEED_VIDEO_CONFIGURATIONS,
+                &found_entry);
+        if (rc == 0) {
+            delete_camera_metadata_entry(vendorInfo[camera_id], found_entry.index);
+        }
     }
 
     info->static_camera_characteristics = vendorInfo[camera_id];
