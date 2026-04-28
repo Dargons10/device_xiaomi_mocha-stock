@@ -32,8 +32,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Lineage genuine
 PRODUCT_PROPERTY_OVERRIDES += \
-    persist.lineage.nofool=true \
-    ro.setupwizard.mode=DISABLED
+    persist.lineage.nofool=true
 
 # LMKD options
 PRODUCT_PROPERTY_OVERRIDES += \
