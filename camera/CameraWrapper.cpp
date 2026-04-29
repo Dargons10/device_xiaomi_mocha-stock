@@ -675,6 +675,36 @@ static bool sanitize_control_regions_and_overrides(camera_metadata_t** metadata_
     return true;
 }
 
+static bool force_legacy_hardware_level(camera_metadata_t** metadata_ptr, int camera_id)
+{
+    camera_metadata_t* metadata = *metadata_ptr;
+    if (metadata == NULL) {
+        return false;
+    }
+
+    camera_metadata_entry_t hw_level;
+    int rc = find_camera_metadata_entry(metadata,
+            ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL,
+            &hw_level);
+
+    const uint8_t legacy_level[] = {
+        ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY,
+    };
+
+    ssize_t existing_index = (rc == 0) ? (ssize_t)hw_level.index : -1;
+    if (!upsert_metadata_entry(metadata_ptr,
+            ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL,
+            legacy_level,
+            sizeof(legacy_level) / sizeof(legacy_level[0]),
+            camera_id,
+            existing_index)) {
+        ALOGE("%s: failed to force legacy hw level for camera %d", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    return true;
+}
+
 static int check_vendor_module()
 {
     int rv = 0;
@@ -783,6 +813,10 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
 
         if (!sanitize_control_regions_and_overrides(&vendorInfo[camera_id], camera_id)) {
             ALOGE("%s: camera %d control region sanitization failed", __FUNCTION__, camera_id);
+        }
+
+        if (!force_legacy_hardware_level(&vendorInfo[camera_id], camera_id)) {
+            ALOGE("%s: camera %d failed to force legacy hw level", __FUNCTION__, camera_id);
         }
 
         has_valid_stream_configurations(vendorInfo[camera_id], camera_id, "final");
