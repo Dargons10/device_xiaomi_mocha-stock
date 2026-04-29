@@ -397,6 +397,49 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
     return has_valid_stream_configurations(metadata, camera_id, "synthesized");
 }
 
+static bool ensure_request_capabilities(camera_metadata_t** metadata_ptr, int camera_id)
+{
+    camera_metadata_t* metadata = *metadata_ptr;
+    if (metadata == NULL) {
+        return false;
+    }
+
+    camera_metadata_entry_t capabilities;
+    int rc = find_camera_metadata_entry(metadata,
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES,
+            &capabilities);
+    if (rc == 0 && capabilities.count > 0) {
+        return true;
+    }
+
+    const int32_t fallback_capabilities[] = {
+        ANDROID_REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE,
+    };
+
+    ssize_t existing_index = (rc == 0) ? (ssize_t)capabilities.index : -1;
+    bool added = upsert_metadata_entry(metadata_ptr,
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES,
+            fallback_capabilities,
+            sizeof(fallback_capabilities) / sizeof(fallback_capabilities[0]),
+            camera_id,
+            existing_index);
+    if (!added) {
+        ALOGE("%s: failed adding request capabilities for camera %d", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    metadata = *metadata_ptr;
+    rc = find_camera_metadata_entry(metadata,
+            ANDROID_REQUEST_AVAILABLE_CAPABILITIES,
+            &capabilities);
+    if (rc != 0 || capabilities.count == 0) {
+        ALOGE("%s: request capabilities still missing for camera %d", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    return true;
+}
+
 static int check_vendor_module()
 {
     int rv = 0;
@@ -493,6 +536,10 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
 
         if (!ensure_stream_configurations(&vendorInfo[camera_id], camera_id)) {
             ALOGE("%s: camera %d stream synthesis failed, keeping high-speed cleanup", __FUNCTION__, camera_id);
+        }
+
+        if (!ensure_request_capabilities(&vendorInfo[camera_id], camera_id)) {
+            ALOGE("%s: camera %d request capabilities synthesis failed", __FUNCTION__, camera_id);
         }
 
         has_valid_stream_configurations(vendorInfo[camera_id], camera_id, "final");
