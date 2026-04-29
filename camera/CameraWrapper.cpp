@@ -296,7 +296,9 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
     const int32_t stream_field_count = 4;
     const size_t processed_pair_count = processed_sizes.count / 2;
     const size_t jpeg_pair_count = jpeg_sizes.count / 2;
-    const size_t total_stream_count = (processed_pair_count + jpeg_pair_count) * stream_field_count;
+    const size_t processed_formats_per_size = 2;
+    const size_t total_stream_count =
+            (processed_pair_count * processed_formats_per_size + jpeg_pair_count) * stream_field_count;
 
     int32_t* synthesized = (int32_t*)calloc(total_stream_count, sizeof(int32_t));
     int64_t* min_frame_durations = (int64_t*)calloc(total_stream_count, sizeof(int64_t));
@@ -325,19 +327,37 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
         if (processed_sizes.data.i32[i] <= 0 || processed_sizes.data.i32[i + 1] <= 0) {
             continue;
         }
+        const int32_t width = processed_sizes.data.i32[i];
+        const int32_t height = processed_sizes.data.i32[i + 1];
+
         synthesized[out++] = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
-        synthesized[out++] = processed_sizes.data.i32[i];
-        synthesized[out++] = processed_sizes.data.i32[i + 1];
+        synthesized[out++] = width;
+        synthesized[out++] = height;
         synthesized[out++] = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT;
 
         min_frame_durations[duration_out++] = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
-        min_frame_durations[duration_out++] = processed_sizes.data.i32[i];
-        min_frame_durations[duration_out++] = processed_sizes.data.i32[i + 1];
+        min_frame_durations[duration_out++] = width;
+        min_frame_durations[duration_out++] = height;
         min_frame_durations[duration_out++] = min_duration_ns;
 
         stall_durations_data[duration_out - 4] = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
-        stall_durations_data[duration_out - 3] = processed_sizes.data.i32[i];
-        stall_durations_data[duration_out - 2] = processed_sizes.data.i32[i + 1];
+        stall_durations_data[duration_out - 3] = width;
+        stall_durations_data[duration_out - 2] = height;
+        stall_durations_data[duration_out - 1] = 0;
+
+        synthesized[out++] = HAL_PIXEL_FORMAT_YCbCr_420_888;
+        synthesized[out++] = width;
+        synthesized[out++] = height;
+        synthesized[out++] = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT;
+
+        min_frame_durations[duration_out++] = HAL_PIXEL_FORMAT_YCbCr_420_888;
+        min_frame_durations[duration_out++] = width;
+        min_frame_durations[duration_out++] = height;
+        min_frame_durations[duration_out++] = min_duration_ns;
+
+        stall_durations_data[duration_out - 4] = HAL_PIXEL_FORMAT_YCbCr_420_888;
+        stall_durations_data[duration_out - 3] = width;
+        stall_durations_data[duration_out - 2] = height;
         stall_durations_data[duration_out - 1] = 0;
     }
 
