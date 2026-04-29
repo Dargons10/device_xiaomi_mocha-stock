@@ -84,6 +84,28 @@ static int camera3_configure_streams(const camera3_device *device, camera3_strea
     if (!device)
         return -1;
 
+    if (stream_list != NULL && stream_list->streams != NULL) {
+        for (size_t i = 0; i < stream_list->num_streams; ++i) {
+            camera3_stream_t* stream = stream_list->streams[i];
+            if (stream == NULL) {
+                continue;
+            }
+
+            if (stream->stream_type != CAMERA3_STREAM_OUTPUT) {
+                continue;
+            }
+
+            if (stream->format == HAL_PIXEL_FORMAT_BLOB ||
+                    stream->format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+                if (stream->data_space != 0) {
+                    ALOGI("%s: camera %d stream[%zu] format=0x%x forcing dataspace %d -> 0",
+                            __FUNCTION__, CAMERA_ID(device), i, stream->format, stream->data_space);
+                    stream->data_space = 0;
+                }
+            }
+        }
+    }
+
     return VENDOR_CALL(device, configure_streams, stream_list);
 }
 
