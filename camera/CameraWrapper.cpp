@@ -133,13 +133,25 @@ static bool has_valid_stream_configurations(camera_metadata_t* metadata, int cam
         return false;
     }
 
+    bool has_blob_output = false;
     for (size_t i = 0; i < stream_configs.count; i += 4) {
+        int32_t format = stream_configs.data.i32[i];
         int32_t width = stream_configs.data.i32[i + 1];
         int32_t height = stream_configs.data.i32[i + 2];
+        int32_t direction = stream_configs.data.i32[i + 3];
         if (width <= 0 || height <= 0) {
             ALOGE("%s[%s]: camera %d bad stream size %dx%d", __FUNCTION__, stage, camera_id, width, height);
             return false;
         }
+        if (direction == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
+                format == HAL_PIXEL_FORMAT_BLOB) {
+            has_blob_output = true;
+        }
+    }
+
+    if (!has_blob_output) {
+        ALOGE("%s[%s]: camera %d missing BLOB output configuration", __FUNCTION__, stage, camera_id);
+        return false;
     }
 
     ALOGI("%s[%s]: camera %d stream configurations count=%u", __FUNCTION__, stage, camera_id, stream_configs.count);
@@ -260,8 +272,9 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
     if (rc == 0 && stream_configs.count >= 4 && (stream_configs.count % 4 == 0) &&
             min_rc == 0 && stall_rc == 0 &&
             min_durations.count == stall_durations.count &&
-            min_durations.count == stream_configs.count) {
-        return has_valid_stream_configurations(metadata, camera_id, "existing");
+            min_durations.count == stream_configs.count &&
+            has_valid_stream_configurations(metadata, camera_id, "existing")) {
+        return true;
     }
 
     camera_metadata_entry_t processed_sizes;
