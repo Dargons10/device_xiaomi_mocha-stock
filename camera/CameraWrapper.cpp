@@ -134,6 +134,7 @@ static bool has_valid_stream_configurations(camera_metadata_t* metadata, int cam
     }
 
     bool has_blob_output = false;
+    bool has_yuv_output = false;
     for (size_t i = 0; i < stream_configs.count; i += 4) {
         int32_t format = stream_configs.data.i32[i];
         int32_t width = stream_configs.data.i32[i + 1];
@@ -147,10 +148,19 @@ static bool has_valid_stream_configurations(camera_metadata_t* metadata, int cam
                 format == HAL_PIXEL_FORMAT_BLOB) {
             has_blob_output = true;
         }
+        if (direction == ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
+                format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+            has_yuv_output = true;
+        }
     }
 
     if (!has_blob_output) {
         ALOGE("%s[%s]: camera %d missing BLOB output configuration", __FUNCTION__, stage, camera_id);
+        return false;
+    }
+
+    if (!has_yuv_output) {
+        ALOGE("%s[%s]: camera %d missing YUV_420_888 output configuration", __FUNCTION__, stage, camera_id);
         return false;
     }
 
