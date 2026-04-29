@@ -146,8 +146,12 @@ static bool has_valid_stream_configurations(camera_metadata_t* metadata, int cam
     return true;
 }
 
-static bool upsert_stream_configurations_entry(camera_metadata_t** metadata_ptr,
-        const int32_t* entries, size_t entry_count, int camera_id, ssize_t existing_index)
+static bool upsert_metadata_entry(camera_metadata_t** metadata_ptr,
+        uint32_t tag,
+        const void* entries,
+        size_t entry_count,
+        int camera_id,
+        ssize_t existing_index)
 {
     camera_metadata_t* metadata = *metadata_ptr;
     int rc = 0;
@@ -159,7 +163,7 @@ static bool upsert_stream_configurations_entry(camera_metadata_t** metadata_ptr,
                 NULL);
     } else {
         rc = add_camera_metadata_entry(metadata,
-                ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+                tag,
                 entries,
                 entry_count);
     }
@@ -192,12 +196,12 @@ static bool upsert_stream_configurations_entry(camera_metadata_t** metadata_ptr,
                 NULL);
     } else {
         rc = add_camera_metadata_entry(expanded,
-                ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+                tag,
                 entries,
                 entry_count);
     }
     if (rc != 0) {
-        ALOGE("%s: failed updating synthesized stream configurations for camera %d", __FUNCTION__, camera_id);
+        ALOGE("%s: failed upserting tag 0x%x for camera %d", __FUNCTION__, tag, camera_id);
         free_camera_metadata(expanded);
         return false;
     }
@@ -215,10 +219,22 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
     }
 
     camera_metadata_entry_t stream_configs;
+    camera_metadata_entry_t min_durations;
+    camera_metadata_entry_t stall_durations;
     int rc = find_camera_metadata_entry(metadata,
             ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
             &stream_configs);
-    if (rc == 0 && stream_configs.count >= 4 && (stream_configs.count % 4 == 0)) {
+    int min_rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS,
+            &min_durations);
+    int stall_rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_STALL_DURATIONS,
+            &stall_durations);
+
+    if (rc == 0 && stream_configs.count >= 4 && (stream_configs.count % 4 == 0) &&
+            min_rc == 0 && stall_rc == 0 &&
+            min_durations.count == stall_durations.count &&
+            min_durations.count == stream_configs.count) {
         return has_valid_stream_configurations(metadata, camera_id, "existing");
     }
 
@@ -244,12 +260,28 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
     const size_t total_stream_count = (processed_pair_count + jpeg_pair_count) * stream_field_count;
 
     int32_t* synthesized = (int32_t*)calloc(total_stream_count, sizeof(int32_t));
+    int64_t* min_frame_durations = (int64_t*)calloc(total_stream_count, sizeof(int64_t));
+    int64_t* stall_durations_data = (int64_t*)calloc(total_stream_count, sizeof(int64_t));
     if (synthesized == NULL) {
         ALOGE("%s: failed to allocate synthesized stream configurations", __FUNCTION__);
+        free(min_frame_durations);
+        free(stall_durations_data);
+        return false;
+    }
+
+    if (min_frame_durations == NULL || stall_durations_data == NULL) {
+        ALOGE("%s: failed to allocate synthesized duration metadata", __FUNCTION__);
+        free(synthesized);
+        free(min_frame_durations);
+        free(stall_durations_data);
         return false;
     }
 
     size_t out = 0;
+    size_t duration_out = 0;
+    const int64_t min_duration_ns = 33333334LL;
+    const int64_t jpeg_stall_ns = 200000000LL;
+
     for (size_t i = 0; i < processed_sizes.count; i += 2) {
         if (processed_sizes.data.i32[i] <= 0 || processed_sizes.data.i32[i + 1] <= 0) {
             continue;
@@ -258,6 +290,16 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
         synthesized[out++] = processed_sizes.data.i32[i];
         synthesized[out++] = processed_sizes.data.i32[i + 1];
         synthesized[out++] = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT;
+
+        min_frame_durations[duration_out++] = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
+        min_frame_durations[duration_out++] = processed_sizes.data.i32[i];
+        min_frame_durations[duration_out++] = processed_sizes.data.i32[i + 1];
+        min_frame_durations[duration_out++] = min_duration_ns;
+
+        stall_durations_data[duration_out - 4] = HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED;
+        stall_durations_data[duration_out - 3] = processed_sizes.data.i32[i];
+        stall_durations_data[duration_out - 2] = processed_sizes.data.i32[i + 1];
+        stall_durations_data[duration_out - 1] = 0;
     }
 
     for (size_t i = 0; i < jpeg_sizes.count; i += 2) {
@@ -268,21 +310,58 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
         synthesized[out++] = jpeg_sizes.data.i32[i];
         synthesized[out++] = jpeg_sizes.data.i32[i + 1];
         synthesized[out++] = ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT;
+
+        min_frame_durations[duration_out++] = HAL_PIXEL_FORMAT_BLOB;
+        min_frame_durations[duration_out++] = jpeg_sizes.data.i32[i];
+        min_frame_durations[duration_out++] = jpeg_sizes.data.i32[i + 1];
+        min_frame_durations[duration_out++] = min_duration_ns;
+
+        stall_durations_data[duration_out - 4] = HAL_PIXEL_FORMAT_BLOB;
+        stall_durations_data[duration_out - 3] = jpeg_sizes.data.i32[i];
+        stall_durations_data[duration_out - 2] = jpeg_sizes.data.i32[i + 1];
+        stall_durations_data[duration_out - 1] = jpeg_stall_ns;
     }
 
-    if (out < 4 || (out % 4) != 0) {
+    if (out < 4 || (out % 4) != 0 || duration_out != out) {
         ALOGE("%s: synthesized stream configurations invalid for camera %d", __FUNCTION__, camera_id);
         free(synthesized);
+        free(min_frame_durations);
+        free(stall_durations_data);
         return false;
     }
 
     ssize_t existing_index = (rc == 0) ? (ssize_t)stream_configs.index : -1;
-    bool added = upsert_stream_configurations_entry(metadata_ptr,
+    ssize_t existing_min_index = (min_rc == 0) ? (ssize_t)min_durations.index : -1;
+    ssize_t existing_stall_index = (stall_rc == 0) ? (ssize_t)stall_durations.index : -1;
+
+    bool added = upsert_metadata_entry(metadata_ptr,
+            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
             synthesized,
             out,
             camera_id,
             existing_index);
+
+    if (added) {
+        added = upsert_metadata_entry(metadata_ptr,
+                ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS,
+                min_frame_durations,
+                duration_out,
+                camera_id,
+                existing_min_index);
+    }
+
+    if (added) {
+        added = upsert_metadata_entry(metadata_ptr,
+                ANDROID_SCALER_AVAILABLE_STALL_DURATIONS,
+                stall_durations_data,
+                duration_out,
+                camera_id,
+                existing_stall_index);
+    }
+
     free(synthesized);
+    free(min_frame_durations);
+    free(stall_durations_data);
 
     if (!added) {
         return false;
