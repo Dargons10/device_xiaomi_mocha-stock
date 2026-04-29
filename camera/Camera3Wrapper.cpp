@@ -100,7 +100,7 @@ static int camera3_configure_streams(const camera3_device *device, camera3_strea
                 if (stream->data_space != 0) {
                     ALOGI("%s: camera %d stream[%zu] format=0x%x forcing dataspace %d -> 0",
                             __FUNCTION__, CAMERA_ID(device), i, stream->format, stream->data_space);
-                    stream->data_space = 0;
+                    stream->data_space = static_cast<android_dataspace_t>(0);
                 }
             }
         }
