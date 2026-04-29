@@ -172,7 +172,33 @@ static bool upsert_metadata_entry(camera_metadata_t** metadata_ptr,
         return true;
     }
 
-    size_t extra_data = entry_count * sizeof(int32_t) + 512;
+    size_t entry_size = sizeof(uint8_t);
+    int tag_type = get_camera_metadata_tag_type(tag);
+    switch (tag_type) {
+        case TYPE_BYTE:
+            entry_size = sizeof(uint8_t);
+            break;
+        case TYPE_INT32:
+            entry_size = sizeof(int32_t);
+            break;
+        case TYPE_FLOAT:
+            entry_size = sizeof(float);
+            break;
+        case TYPE_INT64:
+            entry_size = sizeof(int64_t);
+            break;
+        case TYPE_DOUBLE:
+            entry_size = sizeof(double);
+            break;
+        case TYPE_RATIONAL:
+            entry_size = sizeof(camera_metadata_rational_t);
+            break;
+        default:
+            ALOGE("%s: unknown tag type %d for tag 0x%x camera %d", __FUNCTION__, tag_type, tag, camera_id);
+            return false;
+    }
+
+    size_t extra_data = entry_count * entry_size + 512;
     camera_metadata_t* expanded = allocate_camera_metadata(
             metadata->entry_count + 4,
             metadata->data_count + extra_data);
