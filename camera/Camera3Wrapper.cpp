@@ -95,8 +95,7 @@ static int camera3_configure_streams(const camera3_device *device, camera3_strea
                 continue;
             }
 
-            if (stream->format == HAL_PIXEL_FORMAT_BLOB ||
-                    stream->format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+            if (stream->format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
                 if (stream->data_space != 0) {
                     ALOGI("%s: camera %d stream[%zu] format=0x%x forcing dataspace %d -> 0",
                             __FUNCTION__, CAMERA_ID(device), i, stream->format, stream->data_space);
