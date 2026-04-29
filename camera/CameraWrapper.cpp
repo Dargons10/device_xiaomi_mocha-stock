@@ -146,15 +146,25 @@ static bool has_valid_stream_configurations(camera_metadata_t* metadata, int cam
     return true;
 }
 
-static bool add_stream_configurations_entry(camera_metadata_t** metadata_ptr,
-        const int32_t* entries, size_t entry_count, int camera_id)
+static bool upsert_stream_configurations_entry(camera_metadata_t** metadata_ptr,
+        const int32_t* entries, size_t entry_count, int camera_id, ssize_t existing_index)
 {
     camera_metadata_t* metadata = *metadata_ptr;
-    int add_rc = add_camera_metadata_entry(metadata,
-            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
-            entries,
-            entry_count);
-    if (add_rc == 0) {
+    int rc = 0;
+    if (existing_index >= 0) {
+        rc = update_camera_metadata_entry(metadata,
+                existing_index,
+                entries,
+                entry_count,
+                NULL);
+    } else {
+        rc = add_camera_metadata_entry(metadata,
+                ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+                entries,
+                entry_count);
+    }
+
+    if (rc == 0) {
         return true;
     }
 
@@ -174,12 +184,20 @@ static bool add_stream_configurations_entry(camera_metadata_t** metadata_ptr,
         return false;
     }
 
-    add_rc = add_camera_metadata_entry(expanded,
-            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
-            entries,
-            entry_count);
-    if (add_rc != 0) {
-        ALOGE("%s: failed adding synthesized stream configurations for camera %d", __FUNCTION__, camera_id);
+    if (existing_index >= 0) {
+        rc = update_camera_metadata_entry(expanded,
+                existing_index,
+                entries,
+                entry_count,
+                NULL);
+    } else {
+        rc = add_camera_metadata_entry(expanded,
+                ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+                entries,
+                entry_count);
+    }
+    if (rc != 0) {
+        ALOGE("%s: failed updating synthesized stream configurations for camera %d", __FUNCTION__, camera_id);
         free_camera_metadata(expanded);
         return false;
     }
@@ -220,10 +238,6 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
         return false;
     }
 
-    if (rc == 0) {
-        delete_camera_metadata_entry(metadata, stream_configs.index);
-    }
-
     const int32_t stream_field_count = 4;
     const size_t processed_pair_count = processed_sizes.count / 2;
     const size_t jpeg_pair_count = jpeg_sizes.count / 2;
@@ -262,7 +276,12 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
         return false;
     }
 
-    bool added = add_stream_configurations_entry(metadata_ptr, synthesized, out, camera_id);
+    ssize_t existing_index = (rc == 0) ? (ssize_t)stream_configs.index : -1;
+    bool added = upsert_stream_configurations_entry(metadata_ptr,
+            synthesized,
+            out,
+            camera_id,
+            existing_index);
     free(synthesized);
 
     if (!added) {
