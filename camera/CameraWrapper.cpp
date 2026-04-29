@@ -440,6 +440,72 @@ static bool ensure_request_capabilities(camera_metadata_t** metadata_ptr, int ca
     return true;
 }
 
+static bool sanitize_control_regions_and_overrides(camera_metadata_t** metadata_ptr, int camera_id)
+{
+    camera_metadata_t* metadata = *metadata_ptr;
+    if (metadata == NULL) {
+        return false;
+    }
+
+    camera_metadata_entry_t af_modes;
+    bool has_af = false;
+    bool af_off_only = true;
+    if (find_camera_metadata_entry(metadata,
+            ANDROID_CONTROL_AF_AVAILABLE_MODES,
+            &af_modes) == 0 && af_modes.count > 0) {
+        has_af = true;
+        for (size_t i = 0; i < af_modes.count; ++i) {
+            if (af_modes.data.u8[i] != ANDROID_CONTROL_AF_MODE_OFF) {
+                af_off_only = false;
+                break;
+            }
+        }
+    }
+
+    camera_metadata_entry_t max_regions;
+    int max_regions_rc = find_camera_metadata_entry(metadata,
+            ANDROID_CONTROL_MAX_REGIONS,
+            &max_regions);
+    if (max_regions_rc != 0 || max_regions.count != 3) {
+        int32_t ae_awb_default = 0;
+        if (max_regions_rc == 0 && max_regions.count > 0) {
+            ae_awb_default = max_regions.data.i32[0];
+            if (ae_awb_default < 0) {
+                ae_awb_default = 0;
+            }
+        }
+
+        int32_t sanitized_regions[3] = {
+            ae_awb_default,
+            ae_awb_default,
+            (has_af && !af_off_only) ? ae_awb_default : 0,
+        };
+
+        ssize_t existing_index = (max_regions_rc == 0) ? (ssize_t)max_regions.index : -1;
+        if (!upsert_metadata_entry(metadata_ptr,
+                ANDROID_CONTROL_MAX_REGIONS,
+                sanitized_regions,
+                sizeof(sanitized_regions) / sizeof(sanitized_regions[0]),
+                camera_id,
+                existing_index)) {
+            ALOGE("%s: failed to sanitize max regions for camera %d", __FUNCTION__, camera_id);
+            return false;
+        }
+
+        metadata = *metadata_ptr;
+    }
+
+    camera_metadata_entry_t scene_overrides;
+    int scene_rc = find_camera_metadata_entry(metadata,
+            ANDROID_CONTROL_SCENE_MODE_OVERRIDES,
+            &scene_overrides);
+    if (scene_rc == 0 && scene_overrides.count > 0) {
+        delete_camera_metadata_entry(metadata, scene_overrides.index);
+    }
+
+    return true;
+}
+
 static int check_vendor_module()
 {
     int rv = 0;
@@ -540,6 +606,10 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
 
         if (!ensure_request_capabilities(&vendorInfo[camera_id], camera_id)) {
             ALOGE("%s: camera %d request capabilities synthesis failed", __FUNCTION__, camera_id);
+        }
+
+        if (!sanitize_control_regions_and_overrides(&vendorInfo[camera_id], camera_id)) {
+            ALOGE("%s: camera %d control region sanitization failed", __FUNCTION__, camera_id);
         }
 
         has_valid_stream_configurations(vendorInfo[camera_id], camera_id, "final");
