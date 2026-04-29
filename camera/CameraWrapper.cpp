@@ -410,6 +410,132 @@ static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int c
     return has_valid_stream_configurations(metadata, camera_id, "synthesized");
 }
 
+static bool ensure_jpeg_metadata(camera_metadata_t** metadata_ptr, int camera_id)
+{
+    camera_metadata_t* metadata = *metadata_ptr;
+    if (metadata == NULL) {
+        return false;
+    }
+
+    camera_metadata_entry_t jpeg_sizes;
+    int jpeg_sizes_rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_JPEG_SIZES,
+            &jpeg_sizes);
+
+    camera_metadata_entry_t stream_configs;
+    int stream_rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+            &stream_configs);
+
+    size_t max_pairs = 0;
+    if (jpeg_sizes_rc == 0 && (jpeg_sizes.count % 2) == 0) {
+        max_pairs += jpeg_sizes.count / 2;
+    }
+    if (stream_rc == 0 && (stream_configs.count % 4) == 0) {
+        max_pairs += stream_configs.count / 4;
+    }
+
+    if (max_pairs == 0) {
+        ALOGE("%s: camera %d has no source for JPEG sizes", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    int32_t* sanitized_sizes = (int32_t*)calloc(max_pairs * 2, sizeof(int32_t));
+    if (sanitized_sizes == NULL) {
+        ALOGE("%s: camera %d failed to allocate JPEG sizes buffer", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    size_t size_out = 0;
+    if (jpeg_sizes_rc == 0 && (jpeg_sizes.count % 2) == 0) {
+        for (size_t i = 0; i < jpeg_sizes.count; i += 2) {
+            int32_t width = jpeg_sizes.data.i32[i];
+            int32_t height = jpeg_sizes.data.i32[i + 1];
+            if (width <= 0 || height <= 0) {
+                continue;
+            }
+            sanitized_sizes[size_out++] = width;
+            sanitized_sizes[size_out++] = height;
+        }
+    }
+
+    if (size_out == 0 && stream_rc == 0 && (stream_configs.count % 4) == 0) {
+        for (size_t i = 0; i < stream_configs.count; i += 4) {
+            int32_t format = stream_configs.data.i32[i];
+            int32_t width = stream_configs.data.i32[i + 1];
+            int32_t height = stream_configs.data.i32[i + 2];
+            int32_t direction = stream_configs.data.i32[i + 3];
+            if (format != HAL_PIXEL_FORMAT_BLOB ||
+                    direction != ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT) {
+                continue;
+            }
+            if (width <= 0 || height <= 0) {
+                continue;
+            }
+            sanitized_sizes[size_out++] = width;
+            sanitized_sizes[size_out++] = height;
+        }
+    }
+
+    if (size_out < 2 || (size_out % 2) != 0) {
+        ALOGE("%s: camera %d has no valid JPEG sizes after sanitization", __FUNCTION__, camera_id);
+        free(sanitized_sizes);
+        return false;
+    }
+
+    ssize_t jpeg_sizes_index = (jpeg_sizes_rc == 0) ? (ssize_t)jpeg_sizes.index : -1;
+    if (!upsert_metadata_entry(metadata_ptr,
+            ANDROID_SCALER_AVAILABLE_JPEG_SIZES,
+            sanitized_sizes,
+            size_out,
+            camera_id,
+            jpeg_sizes_index)) {
+        ALOGE("%s: camera %d failed to upsert JPEG sizes", __FUNCTION__, camera_id);
+        free(sanitized_sizes);
+        return false;
+    }
+
+    free(sanitized_sizes);
+
+    metadata = *metadata_ptr;
+    camera_metadata_entry_t jpeg_durations;
+    int durations_rc = find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_JPEG_MIN_DURATIONS,
+            &jpeg_durations);
+    size_t expected_duration_count = size_out / 2;
+
+    bool needs_duration_fix = (durations_rc != 0 || jpeg_durations.count != expected_duration_count);
+    int64_t* sanitized_durations = NULL;
+    if (needs_duration_fix) {
+        sanitized_durations = (int64_t*)calloc(expected_duration_count, sizeof(int64_t));
+        if (sanitized_durations == NULL) {
+            ALOGE("%s: camera %d failed to allocate JPEG durations", __FUNCTION__, camera_id);
+            return false;
+        }
+
+        const int64_t fallback_jpeg_duration_ns = 200000000LL;
+        for (size_t i = 0; i < expected_duration_count; ++i) {
+            sanitized_durations[i] = fallback_jpeg_duration_ns;
+        }
+
+        ssize_t existing_durations_index = (durations_rc == 0) ? (ssize_t)jpeg_durations.index : -1;
+        if (!upsert_metadata_entry(metadata_ptr,
+                ANDROID_SCALER_AVAILABLE_JPEG_MIN_DURATIONS,
+                sanitized_durations,
+                expected_duration_count,
+                camera_id,
+                existing_durations_index)) {
+            ALOGE("%s: camera %d failed to upsert JPEG durations", __FUNCTION__, camera_id);
+            free(sanitized_durations);
+            return false;
+        }
+
+        free(sanitized_durations);
+    }
+
+    return true;
+}
+
 static bool ensure_request_capabilities(camera_metadata_t** metadata_ptr, int camera_id)
 {
     camera_metadata_t* metadata = *metadata_ptr;
@@ -611,6 +737,10 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
                 &found_entry);
         if (rc == 0) {
             delete_camera_metadata_entry(vendorInfo[camera_id], found_entry.index);
+        }
+
+        if (!ensure_jpeg_metadata(&vendorInfo[camera_id], camera_id)) {
+            ALOGE("%s: camera %d JPEG metadata synthesis failed", __FUNCTION__, camera_id);
         }
 
         if (!ensure_stream_configurations(&vendorInfo[camera_id], camera_id)) {
