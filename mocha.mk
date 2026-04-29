@@ -258,7 +258,8 @@ PRODUCT_PACKAGES += \
 
 #Renderer
 PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/rootdir/etc/init.renderer.sh:system/bin/init.renderer.sh
+    $(LOCAL_PATH)/rootdir/etc/init.renderer.sh:system/bin/init.renderer.sh \
+    $(LOCAL_PATH)/rootdir/etc/enable_camera2_components.sh:system/bin/enable_camera2_components.sh
 
 # Seccomp
 PRODUCT_COPY_FILES += \

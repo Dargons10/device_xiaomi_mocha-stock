@@ -43,6 +43,7 @@ on init
    
 on property:dev.bootcomplete=1
     start init_renderer
+    start camera2_component_fix
 
 
 on boot
@@ -51,6 +52,11 @@ on boot
 
 service init_renderer /system/bin/init.renderer.sh
     user root
+    oneshot
+
+service camera2_component_fix /system/bin/sh /system/bin/enable_camera2_components.sh
+    user root
+    group root system
     oneshot
 
 service media /system/bin/mediaserver
