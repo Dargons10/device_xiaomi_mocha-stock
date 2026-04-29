@@ -705,6 +705,65 @@ static bool force_legacy_hardware_level(camera_metadata_t** metadata_ptr, int ca
     return true;
 }
 
+static bool force_legacy_request_limits(camera_metadata_t** metadata_ptr, int camera_id)
+{
+    camera_metadata_t* metadata = *metadata_ptr;
+    if (metadata == NULL) {
+        return false;
+    }
+
+    camera_metadata_entry_t max_outputs;
+    int outputs_rc = find_camera_metadata_entry(metadata,
+            ANDROID_REQUEST_MAX_NUM_OUTPUT_STREAMS,
+            &max_outputs);
+
+    const int32_t legacy_max_outputs[] = {
+        0, // RAW
+        1, // PROC
+        1, // PROC_STALLING
+    };
+
+    ssize_t max_outputs_index = (outputs_rc == 0) ? (ssize_t)max_outputs.index : -1;
+    if (!upsert_metadata_entry(metadata_ptr,
+            ANDROID_REQUEST_MAX_NUM_OUTPUT_STREAMS,
+            legacy_max_outputs,
+            sizeof(legacy_max_outputs) / sizeof(legacy_max_outputs[0]),
+            camera_id,
+            max_outputs_index)) {
+        ALOGE("%s: failed to force max output streams for camera %d", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    metadata = *metadata_ptr;
+
+    camera_metadata_entry_t max_inputs;
+    int inputs_rc = find_camera_metadata_entry(metadata,
+            ANDROID_REQUEST_MAX_NUM_INPUT_STREAMS,
+            &max_inputs);
+    const int32_t legacy_max_inputs[] = { 0 };
+    ssize_t max_inputs_index = (inputs_rc == 0) ? (ssize_t)max_inputs.index : -1;
+    if (!upsert_metadata_entry(metadata_ptr,
+            ANDROID_REQUEST_MAX_NUM_INPUT_STREAMS,
+            legacy_max_inputs,
+            sizeof(legacy_max_inputs) / sizeof(legacy_max_inputs[0]),
+            camera_id,
+            max_inputs_index)) {
+        ALOGE("%s: failed to force max input streams for camera %d", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    metadata = *metadata_ptr;
+
+    camera_metadata_entry_t io_formats_map;
+    if (find_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_INPUT_OUTPUT_FORMATS_MAP,
+            &io_formats_map) == 0) {
+        delete_camera_metadata_entry(metadata, io_formats_map.index);
+    }
+
+    return true;
+}
+
 static int check_vendor_module()
 {
     int rv = 0;
@@ -817,6 +876,10 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
 
         if (!force_legacy_hardware_level(&vendorInfo[camera_id], camera_id)) {
             ALOGE("%s: camera %d failed to force legacy hw level", __FUNCTION__, camera_id);
+        }
+
+        if (!force_legacy_request_limits(&vendorInfo[camera_id], camera_id)) {
+            ALOGE("%s: camera %d failed to force legacy request limits", __FUNCTION__, camera_id);
         }
 
         has_valid_stream_configurations(vendorInfo[camera_id], camera_id, "final");
