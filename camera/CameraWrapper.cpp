@@ -146,8 +146,52 @@ static bool has_valid_stream_configurations(camera_metadata_t* metadata, int cam
     return true;
 }
 
-static bool ensure_stream_configurations(camera_metadata_t* metadata, int camera_id)
+static bool add_stream_configurations_entry(camera_metadata_t** metadata_ptr,
+        const int32_t* entries, size_t entry_count, int camera_id)
 {
+    camera_metadata_t* metadata = *metadata_ptr;
+    int add_rc = add_camera_metadata_entry(metadata,
+            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+            entries,
+            entry_count);
+    if (add_rc == 0) {
+        return true;
+    }
+
+    size_t extra_data = entry_count * sizeof(int32_t) + 512;
+    camera_metadata_t* expanded = allocate_camera_metadata(
+            metadata->entry_count + 4,
+            metadata->data_count + extra_data);
+    if (expanded == NULL) {
+        ALOGE("%s: failed to allocate expanded metadata for camera %d", __FUNCTION__, camera_id);
+        return false;
+    }
+
+    int append_rc = append_camera_metadata(expanded, metadata);
+    if (append_rc != 0) {
+        ALOGE("%s: failed appending metadata for camera %d", __FUNCTION__, camera_id);
+        free_camera_metadata(expanded);
+        return false;
+    }
+
+    add_rc = add_camera_metadata_entry(expanded,
+            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+            entries,
+            entry_count);
+    if (add_rc != 0) {
+        ALOGE("%s: failed adding synthesized stream configurations for camera %d", __FUNCTION__, camera_id);
+        free_camera_metadata(expanded);
+        return false;
+    }
+
+    free_camera_metadata(metadata);
+    *metadata_ptr = expanded;
+    return true;
+}
+
+static bool ensure_stream_configurations(camera_metadata_t** metadata_ptr, int camera_id)
+{
+    camera_metadata_t* metadata = *metadata_ptr;
     if (metadata == NULL) {
         return false;
     }
@@ -218,17 +262,14 @@ static bool ensure_stream_configurations(camera_metadata_t* metadata, int camera
         return false;
     }
 
-    int add_rc = add_camera_metadata_entry(metadata,
-            ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
-            synthesized,
-            out);
+    bool added = add_stream_configurations_entry(metadata_ptr, synthesized, out, camera_id);
     free(synthesized);
 
-    if (add_rc != 0) {
-        ALOGE("%s: failed adding synthesized stream configurations for camera %d", __FUNCTION__, camera_id);
+    if (!added) {
         return false;
     }
 
+    metadata = *metadata_ptr;
     return has_valid_stream_configurations(metadata, camera_id, "synthesized");
 }
 
@@ -326,7 +367,7 @@ static int camera_get_camera_info(int camera_id, struct camera_info *info)
             delete_camera_metadata_entry(vendorInfo[camera_id], found_entry.index);
         }
 
-        if (!ensure_stream_configurations(vendorInfo[camera_id], camera_id)) {
+        if (!ensure_stream_configurations(&vendorInfo[camera_id], camera_id)) {
             ALOGE("%s: camera %d stream synthesis failed, keeping high-speed cleanup", __FUNCTION__, camera_id);
         }
 
