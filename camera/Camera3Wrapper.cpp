@@ -84,6 +84,27 @@ static int camera3_configure_streams(const camera3_device *device, camera3_strea
     if (!device)
         return -1;
 
+    if (stream_list != NULL && stream_list->streams != NULL) {
+        ALOGI("%s: camera %d operation_mode=%u num_streams=%zu",
+                __FUNCTION__, CAMERA_ID(device), stream_list->operation_mode,
+                stream_list->num_streams);
+
+        for (size_t i = 0; i < stream_list->num_streams; ++i) {
+            camera3_stream_t* stream = stream_list->streams[i];
+            if (stream == NULL) {
+                ALOGI("%s: camera %d stream[%zu] is null", __FUNCTION__, CAMERA_ID(device), i);
+                continue;
+            }
+
+            ALOGI("%s: camera %d stream[%zu] type=%d format=0x%x %ux%u usage=0x%llx dataspace=%d rotation=%d",
+                    __FUNCTION__, CAMERA_ID(device), i, stream->stream_type, stream->format,
+                    stream->width, stream->height,
+                    static_cast<unsigned long long>(stream->usage),
+                    static_cast<int>(stream->data_space),
+                    stream->rotation);
+        }
+    }
+
     return VENDOR_CALL(device, configure_streams, stream_list);
 }
 
