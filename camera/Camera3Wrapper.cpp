@@ -58,6 +58,26 @@ static int check_vendor_module()
 
 static const camera_metadata_t * camera3_fixup_construct_default_request_settings(android::CameraMetadata metadata)
 {
+    static const uint32_t kLegacyBadTemplateTags[] = {
+        1048578, // availableModes (bad type on legacy blob)
+        589834,  // unknown legacy vendor/depth-adjacent tag
+        589835,  // unknown legacy vendor/depth-adjacent tag
+        1638400, // maxDepthSamples (bad type on legacy blob)
+        1638401, // availableDepthStreamConfigurations (bad type)
+        1638402, // availableDepthMinFrameDurations (bad type)
+        1703936, // unknown depth-adjacent tag
+        1769472, // unknown depth-adjacent tag
+        1769473, // unknown depth-adjacent tag
+    };
+
+    for (size_t i = 0; i < sizeof(kLegacyBadTemplateTags) / sizeof(kLegacyBadTemplateTags[0]); ++i) {
+        uint32_t tag = kLegacyBadTemplateTags[i];
+        if (metadata.exists(tag)) {
+            ALOGI("%s: removing problematic template tag %u", __FUNCTION__, tag);
+            metadata.erase(tag);
+        }
+    }
+
     return metadata.release();
 }
 
