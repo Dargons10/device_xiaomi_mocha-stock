@@ -60,12 +60,17 @@ static void sanitize_result_metadata(android::CameraMetadata* metadata)
         1835013,
     };
 
+    size_t removed = 0;
     for (size_t i = 0; i < sizeof(kLegacyBadResultTags) / sizeof(kLegacyBadResultTags[0]); ++i) {
         uint32_t tag = kLegacyBadResultTags[i];
         if (metadata->exists(tag)) {
             ALOGI("%s: removing problematic result tag %u", __FUNCTION__, tag);
             metadata->erase(tag);
+            removed++;
         }
+    }
+    if (removed > 0) {
+        ALOGI("%s: removed %zu problematic result tags", __FUNCTION__, removed);
     }
 }
 
@@ -87,6 +92,11 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
             reinterpret_cast<const wrapper_camera3_callback_ops_t*>(callback_ops);
     if (wrapper == NULL || wrapper->real == NULL || wrapper->real->process_capture_result == NULL) {
         return;
+    }
+
+    if (result != NULL) {
+        ALOGI("%s: frame=%u partial=%u result_ptr=%p", __FUNCTION__,
+                result->frame_number, result->partial_result, result->result);
     }
 
     if (result == NULL || result->result == NULL) {
