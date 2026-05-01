@@ -84,9 +84,6 @@ static int camera3_configure_streams(const camera3_device *device, camera3_strea
     if (!device)
         return -1;
 
-    android_dataspace_t original_dataspace[16];
-    memset(original_dataspace, 0, sizeof(original_dataspace));
-
     if (stream_list != NULL && stream_list->streams != NULL) {
         ALOGI("%s: camera %d operation_mode=%u num_streams=%zu",
                 __FUNCTION__, CAMERA_ID(device), stream_list->operation_mode,
@@ -106,35 +103,18 @@ static int camera3_configure_streams(const camera3_device *device, camera3_strea
                     static_cast<int>(stream->data_space),
                     stream->rotation);
 
-            if (i < (sizeof(original_dataspace) / sizeof(original_dataspace[0]))) {
-                original_dataspace[i] = stream->data_space;
-            }
-        }
-    }
-
-    int ret = VENDOR_CALL(device, configure_streams, stream_list);
-
-    if (ret == 0 && stream_list != NULL && stream_list->streams != NULL) {
-        for (size_t i = 0; i < stream_list->num_streams; ++i) {
-            camera3_stream_t* stream = stream_list->streams[i];
-            if (stream == NULL) {
-                continue;
-            }
-
             if (stream->stream_type == CAMERA3_STREAM_OUTPUT &&
                     stream->format == HAL_PIXEL_FORMAT_BLOB &&
-                    i < (sizeof(original_dataspace) / sizeof(original_dataspace[0])) &&
-                    stream->data_space != original_dataspace[i]) {
-                ALOGI("%s: camera %d stream[%zu] restoring BLOB dataspace %d -> %d",
+                    stream->data_space != static_cast<android_dataspace_t>(0)) {
+                ALOGI("%s: camera %d stream[%zu] forcing BLOB dataspace %d -> 0",
                         __FUNCTION__, CAMERA_ID(device), i,
-                        static_cast<int>(stream->data_space),
-                        static_cast<int>(original_dataspace[i]));
-                stream->data_space = original_dataspace[i];
+                        static_cast<int>(stream->data_space));
+                stream->data_space = static_cast<android_dataspace_t>(0);
             }
         }
     }
 
-    return ret;
+    return VENDOR_CALL(device, configure_streams, stream_list);
 }
 
 static int camera3_register_stream_buffers(const camera3_device *device, const camera3_stream_buffer_set_t *buffer_set)
