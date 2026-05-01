@@ -1,36 +1,26 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Dargons10 <dargons10@localhost>
-Date: Fri, 1 May 2026 00:00:00 +0000
-Subject: [PATCH] Camera3Device: allow BLOB dataspace override
-
-Legacy camera HALs may return a different dataspace for JPEG/BLOB output
-streams during configureStreams. Accept this override specifically for
-BLOB streams instead of aborting stream configuration.
----
- services/camera/libcameraservice/device3/Camera3Device.cpp | 11 ++++++++++-
- 1 file changed, 10 insertions(+), 1 deletion(-)
-
 diff --git a/services/camera/libcameraservice/device3/Camera3Device.cpp b/services/camera/libcameraservice/device3/Camera3Device.cpp
-index 0d44d39..27f8f92 100644
+index 91a8d4f..6fb72dd 100644
 --- a/services/camera/libcameraservice/device3/Camera3Device.cpp
 +++ b/services/camera/libcameraservice/device3/Camera3Device.cpp
-@@ -3311,7 +3311,16 @@ status_t Camera3Device::HalInterface::configureStreams(camera3_stream_configurat
-                ALOGE("%s: Stream %d: Format override not allowed for format 0x%x", __FUNCTION__,
-                        streamId, dst->format);
-            }
--           if (dst->data_space != overrideDataSpace) {
-+           if (dst->format == HAL_PIXEL_FORMAT_BLOB &&
-+                   dst->data_space != overrideDataSpace) {
-+               // Legacy HAL quirk: accept dataspace override for BLOB outputs.
-+               dstStream->setDataSpaceOverride(true);
-+               ALOGI("%s: Stream %d: accepting BLOB dataspace override %d -> %d",
-+                       __FUNCTION__, streamId,
-+                       static_cast<int>(dst->data_space),
-+                       static_cast<int>(overrideDataSpace));
-+               dst->data_space = overrideDataSpace;
-+           } else if (dst->data_space != overrideDataSpace) {
-                ALOGE("%s: Stream %d: DataSpace override not allowed for format 0x%x", __FUNCTION__,
-                        streamId, dst->format);
-            }
--- 
-2.34.1
+@@ -3309,10 +3309,19 @@ status_t Camera3Device::HalInterface::configureStreams(camera3_stream_configurat
+         if (dst->format != HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
+             if (dst->format != overrideFormat) {
+                 ALOGE("%s: Stream %d: Format override not allowed for format 0x%x", __FUNCTION__,
+                         streamId, dst->format);
+             }
+-            if (dst->data_space != overrideDataSpace) {
++            if (dst->format == HAL_PIXEL_FORMAT_BLOB &&
++                    dst->data_space != overrideDataSpace) {
++                // Legacy HAL quirk: accept dataspace override for BLOB outputs.
++                dstStream->setDataSpaceOverride(true);
++                ALOGI("%s: Stream %d: accepting BLOB dataspace override %d -> %d",
++                        __FUNCTION__, streamId,
++                        static_cast<int>(dst->data_space),
++                        static_cast<int>(overrideDataSpace));
++                dst->data_space = overrideDataSpace;
++            } else if (dst->data_space != overrideDataSpace) {
+                 ALOGE("%s: Stream %d: DataSpace override not allowed for format 0x%x", __FUNCTION__,
+                         streamId, dst->format);
+             }
+         } else {
+             dstStream->setFormatOverride((dst->format != overrideFormat) ? true : false);
