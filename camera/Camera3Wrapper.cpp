@@ -114,6 +114,11 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
     sanitize_result_metadata(&sanitized);
 
     camera3_capture_result_t patched = *result;
+    if (patched.partial_result == 0 || patched.partial_result > 16) {
+        ALOGI("%s: frame=%u clamping suspicious partial_result %u -> 1",
+                __FUNCTION__, patched.frame_number, patched.partial_result);
+        patched.partial_result = 1;
+    }
     patched.result = sanitized.getAndLock();
     wrapper->real->process_capture_result(wrapper->real, &patched);
     sanitized.unlock(patched.result);
