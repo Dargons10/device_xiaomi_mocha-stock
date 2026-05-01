@@ -27,7 +27,14 @@ typedef struct wrapper_camera3_device {
     camera3_device_t base;
     int id;
     camera3_device_t *vendor;
+    struct wrapper_camera3_callback_ops* callback_ops;
 } wrapper_camera3_device_t;
+
+typedef struct wrapper_camera3_callback_ops {
+    camera3_callback_ops_t base;
+    const camera3_callback_ops_t* real;
+    int camera_id;
+} wrapper_camera3_callback_ops_t;
 
 #define VENDOR_CALL(device, func, ...) ({ \
     wrapper_camera3_device_t *__wrapper_dev = (wrapper_camera3_device_t*) device; \
@@ -37,6 +44,64 @@ typedef struct wrapper_camera3_device {
 #define CAMERA_ID(device) (((wrapper_camera3_device_t *)(device))->id)
 
 static camera_module_t *gVendorModule = 0;
+
+static void sanitize_result_metadata(android::CameraMetadata* metadata)
+{
+    static const uint32_t kLegacyBadResultTags[] = {
+        1048578,
+        589834,
+        589835,
+        1638400,
+        1638401,
+        1638402,
+        1703936,
+        1769472,
+        1769473,
+        1835013,
+    };
+
+    for (size_t i = 0; i < sizeof(kLegacyBadResultTags) / sizeof(kLegacyBadResultTags[0]); ++i) {
+        uint32_t tag = kLegacyBadResultTags[i];
+        if (metadata->exists(tag)) {
+            ALOGI("%s: removing problematic result tag %u", __FUNCTION__, tag);
+            metadata->erase(tag);
+        }
+    }
+}
+
+static void camera3_notify_callback(const camera3_callback_ops_t* callback_ops,
+        const camera3_notify_msg_t* msg)
+{
+    const wrapper_camera3_callback_ops_t* wrapper =
+            reinterpret_cast<const wrapper_camera3_callback_ops_t*>(callback_ops);
+    if (wrapper == NULL || wrapper->real == NULL || wrapper->real->notify == NULL) {
+        return;
+    }
+    wrapper->real->notify(wrapper->real, msg);
+}
+
+static void camera3_process_capture_result_callback(const camera3_callback_ops_t* callback_ops,
+        const camera3_capture_result_t* result)
+{
+    const wrapper_camera3_callback_ops_t* wrapper =
+            reinterpret_cast<const wrapper_camera3_callback_ops_t*>(callback_ops);
+    if (wrapper == NULL || wrapper->real == NULL || wrapper->real->process_capture_result == NULL) {
+        return;
+    }
+
+    if (result == NULL || result->result == NULL) {
+        wrapper->real->process_capture_result(wrapper->real, result);
+        return;
+    }
+
+    android::CameraMetadata sanitized(result->result);
+    sanitize_result_metadata(&sanitized);
+
+    camera3_capture_result_t patched = *result;
+    patched.result = sanitized.getAndLock();
+    wrapper->real->process_capture_result(wrapper->real, &patched);
+    sanitized.unlock(patched.result);
+}
 
 static int check_vendor_module()
 {
@@ -93,7 +158,22 @@ static int camera3_initialize(const camera3_device_t *device, const camera3_call
     if (!device)
         return -1;
 
-    return VENDOR_CALL(device, initialize, callback_ops);
+    wrapper_camera3_device_t* wrapper_dev = (wrapper_camera3_device_t*)device;
+    if (wrapper_dev->callback_ops == NULL) {
+        wrapper_dev->callback_ops = (wrapper_camera3_callback_ops_t*)calloc(1,
+                sizeof(wrapper_camera3_callback_ops_t));
+        if (wrapper_dev->callback_ops == NULL) {
+            ALOGE("%s: callback ops allocation failed", __FUNCTION__);
+            return -ENOMEM;
+        }
+    }
+
+    wrapper_dev->callback_ops->real = callback_ops;
+    wrapper_dev->callback_ops->camera_id = wrapper_dev->id;
+    wrapper_dev->callback_ops->base.notify = camera3_notify_callback;
+    wrapper_dev->callback_ops->base.process_capture_result = camera3_process_capture_result_callback;
+
+    return VENDOR_CALL(device, initialize, &wrapper_dev->callback_ops->base);
 }
 
 static int camera3_configure_streams(const camera3_device *device, camera3_stream_configuration_t *stream_list)
@@ -251,6 +331,10 @@ static int camera3_device_close(hw_device_t *device)
     wrapper_dev = (wrapper_camera3_device_t*) device;
 
     wrapper_dev->vendor->common.close((hw_device_t*)wrapper_dev->vendor);
+    if (wrapper_dev->callback_ops) {
+        free(wrapper_dev->callback_ops);
+        wrapper_dev->callback_ops = NULL;
+    }
     if (wrapper_dev->base.ops)
         free(wrapper_dev->base.ops);
     free(wrapper_dev);
