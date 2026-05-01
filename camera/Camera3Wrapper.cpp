@@ -94,7 +94,13 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
         return;
     }
 
-    android::CameraMetadata sanitized(result->result);
+    android::CameraMetadata sanitized;
+    camera_metadata_t* cloned = clone_camera_metadata(result->result);
+    if (cloned == NULL) {
+        wrapper->real->process_capture_result(wrapper->real, result);
+        return;
+    }
+    sanitized.acquire(cloned);
     sanitize_result_metadata(&sanitized);
 
     camera3_capture_result_t patched = *result;
