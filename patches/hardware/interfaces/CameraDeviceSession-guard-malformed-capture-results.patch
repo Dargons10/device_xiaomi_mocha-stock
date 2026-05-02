@@ -1,4 +1,5 @@
 diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3.2/default/CameraDeviceSession.cpp
+index 1111111..2222222 100644
 --- a/camera/device/3.2/default/CameraDeviceSession.cpp
 +++ b/camera/device/3.2/default/CameraDeviceSession.cpp
 @@ -778,6 +778,27 @@ void CameraDeviceSession::sProcessCaptureResult(
@@ -16,8 +17,8 @@ diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3
 +        return;
 +    }
 +
-+    // Additional guard: if metadata cloning fails downstream due malformed
-+    // payloads, forwarding a metadata-less callback is safer than crashing.
++    // Additional guard: if metadata cloning fails due malformed payloads,
++    // forwarding a metadata-less callback is safer than crashing.
 +    if (result->result != nullptr) {
 +        camera_metadata_t* cloned = clone_camera_metadata(result->result);
 +        if (cloned == nullptr) {
