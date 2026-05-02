@@ -2,7 +2,7 @@ diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3
 index 1111111..2222222 100644
 --- a/camera/device/3.2/default/CameraDeviceSession.cpp
 +++ b/camera/device/3.2/default/CameraDeviceSession.cpp
-@@ -778,6 +778,27 @@ void CameraDeviceSession::sProcessCaptureResult(
+@@ -778,6 +778,30 @@ void CameraDeviceSession::sProcessCaptureResult(
      if (cb == nullptr || result == nullptr) {
          return;
      }
