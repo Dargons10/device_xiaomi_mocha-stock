@@ -191,12 +191,10 @@ static int camera3_initialize(const camera3_device_t *device, const camera3_call
         }
     }
 
-    wrapper_dev->callback_ops->real = callback_ops;
-    wrapper_dev->callback_ops->camera_id = wrapper_dev->id;
-    wrapper_dev->callback_ops->base.notify = camera3_notify_callback;
-    wrapper_dev->callback_ops->base.process_capture_result = camera3_process_capture_result_callback;
-
-    return VENDOR_CALL(device, initialize, &wrapper_dev->callback_ops->base);
+    // Disable callback wrapping for now; legacy blobs may emit non-standard
+    // callback payloads that crash through wrapper mediation.
+    (void)wrapper_dev;
+    return VENDOR_CALL(device, initialize, callback_ops);
 }
 
 static int camera3_configure_streams(const camera3_device *device, camera3_stream_configuration_t *stream_list)
