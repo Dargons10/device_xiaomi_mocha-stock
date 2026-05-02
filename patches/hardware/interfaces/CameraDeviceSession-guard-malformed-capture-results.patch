@@ -1,0 +1,35 @@
+diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3.2/default/CameraDeviceSession.cpp
+index 8f4db1d..b8f4f67 100644
+--- a/camera/device/3.2/default/CameraDeviceSession.cpp
++++ b/camera/device/3.2/default/CameraDeviceSession.cpp
+@@ -778,6 +778,34 @@ void CameraDeviceSession::sProcessCaptureResult(
+     if (cb == nullptr || result == nullptr) {
+         return;
+     }
++
++    // Legacy Tegra camera blobs may provide malformed partial_result values and
++    // metadata payloads in early callbacks. Guard here to avoid crashing
++    // mediaserver while still forwarding buffer completion information.
++    if (result->partial_result == 0 || result->partial_result > 16) {
++        camera3_capture_result_t safe = *result;
++        safe.partial_result = 0;
++        safe.result = nullptr;
++        cb->process_capture_result(cb, &safe);
++        return;
++    }
++
++    if (result->result != nullptr) {
++        camera_metadata_t* cloned = clone_camera_metadata(result->result);
++        if (cloned != nullptr) {
++            camera3_capture_result_t safe = *result;
++            // Strip metadata for compatibility; keep callback/buffer flow.
++            safe.result = nullptr;
++            safe.partial_result = 0;
++            cb->process_capture_result(cb, &safe);
++            free_camera_metadata(cloned);
++            return;
++        }
++    }
+ 
+     cb->process_capture_result(cb, result);
+ }
