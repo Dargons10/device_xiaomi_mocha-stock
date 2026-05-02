@@ -114,14 +114,19 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
     sanitize_result_metadata(&sanitized);
 
     camera3_capture_result_t patched = *result;
+    const camera_metadata_t* locked_result = sanitized.getAndLock();
     if (patched.partial_result == 0 || patched.partial_result > 16) {
-        ALOGI("%s: frame=%u clamping suspicious partial_result %u -> 1",
+        ALOGI("%s: frame=%u dropping malformed partial_result=%u metadata",
                 __FUNCTION__, patched.frame_number, patched.partial_result);
-        patched.partial_result = 1;
+        patched.partial_result = 0;
+        patched.result = NULL;
+        wrapper->real->process_capture_result(wrapper->real, &patched);
+        sanitized.unlock(locked_result);
+        return;
     }
-    patched.result = sanitized.getAndLock();
+    patched.result = locked_result;
     wrapper->real->process_capture_result(wrapper->real, &patched);
-    sanitized.unlock(patched.result);
+    sanitized.unlock(locked_result);
 }
 
 static int check_vendor_module()
