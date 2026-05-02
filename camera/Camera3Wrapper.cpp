@@ -116,15 +116,10 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
     camera3_capture_result_t patched = *result;
     const camera_metadata_t* locked_result = sanitized.getAndLock();
     if (patched.partial_result == 0 || patched.partial_result > 16) {
-        if (patched.result != NULL) {
-            ALOGI("%s: frame=%u coercing malformed partial_result=%u -> 1",
-                    __FUNCTION__, patched.frame_number, patched.partial_result);
-            patched.partial_result = 1;
-        } else {
-            ALOGI("%s: frame=%u keeping partial_result=0 for empty result",
-                    __FUNCTION__, patched.frame_number);
-            patched.partial_result = 0;
-        }
+        ALOGI("%s: frame=%u dropping malformed partial_result=%u callback",
+                __FUNCTION__, patched.frame_number, patched.partial_result);
+        sanitized.unlock(locked_result);
+        return;
     }
     patched.result = locked_result;
     wrapper->real->process_capture_result(wrapper->real, &patched);
