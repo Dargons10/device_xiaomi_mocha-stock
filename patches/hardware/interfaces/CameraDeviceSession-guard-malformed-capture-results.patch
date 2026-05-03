@@ -1,15 +1,19 @@
 diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3.2/default/CameraDeviceSession.cpp
 --- a/camera/device/3.2/default/CameraDeviceSession.cpp
 +++ b/camera/device/3.2/default/CameraDeviceSession.cpp
-@@ -1218,4 +1218,7 @@
+@@ -1215,9 +1215,14 @@ Return<void> CameraDeviceSession::processCaptureResult(
+     CaptureResult result;
+     result.frameNumber = frameNumber;
+     result.fmqResultSize = 0;
 -    result.partialResult = hal_result->partial_result;
 -    convertToHidl(hal_result->result, &result.result);
 -    if (nullptr != hal_result->result) {
--        bool resultOverriden = false;
-+    // Legacy Tegra blobs can emit malformed metadata/partial counters.
-+    // Keep buffer callback flow but avoid metadata conversion crashes.
++    // Legacy Tegra blobs may return malformed metadata/partial counters.
++    // Avoid metadata conversion crashes while still delivering buffer callbacks.
 +    result.partialResult = 0;
 +    result.result.resize(0);
 +
++    // Disabled on purpose for stability with malformed legacy metadata.
 +    if (false && nullptr != hal_result->result) {
-+        bool resultOverriden = false;
+         bool resultOverriden = false;
+         Mutex::Autolock _l(d->mInflightLock);
