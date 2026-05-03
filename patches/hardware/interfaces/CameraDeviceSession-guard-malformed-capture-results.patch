@@ -1,7 +1,10 @@
 diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3.2/default/CameraDeviceSession.cpp
 --- a/camera/device/3.2/default/CameraDeviceSession.cpp
 +++ b/camera/device/3.2/default/CameraDeviceSession.cpp
-@@ -1218,4 +1218,8 @@
+@@ -1215,10 +1215,14 @@ void CameraDeviceSession::sProcessCaptureResult(
+     CaptureResult result;
+     result.frameNumber = frameNumber;
+     result.fmqResultSize = 0;
 -    result.partialResult = hal_result->partial_result;
 -    convertToHidl(hal_result->result, &result.result);
 -    if (nullptr != hal_result->result) {
@@ -13,3 +16,6 @@ diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3
 +
 +    if (false && nullptr != hal_result->result) {
 +        bool resultOverriden = false;
+         Mutex::Autolock _l(d->mInflightLock);
+
+         // Derive some new keys for backward compatibility
