@@ -95,8 +95,8 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
     }
 
     if (result != NULL) {
-        ALOGI("%s: frame=%u partial=%u result_ptr=%p", __FUNCTION__,
-                result->frame_number, result->partial_result, result->result);
+        ALOGI("%s: frame=%u partial=%u result_ptr=%p output_buffers=%p", __FUNCTION__,
+                result->frame_number, result->partial_result, result->result, result->output_buffers);
     }
 
     if (result == NULL || result->result == NULL) {
@@ -119,7 +119,7 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
         ALOGI("%s: frame=%u stripping malformed partial_result=%u metadata",
                 __FUNCTION__, patched.frame_number, patched.partial_result);
         patched.partial_result = 0;
-        patched.result = NULL;
+        patched.result = result->result;
         wrapper->real->process_capture_result(wrapper->real, &patched);
         sanitized.unlock(locked_result);
         return;
