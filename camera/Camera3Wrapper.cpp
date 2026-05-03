@@ -119,7 +119,7 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
         ALOGI("%s: frame=%u stripping malformed partial_result=%u metadata",
                 __FUNCTION__, patched.frame_number, patched.partial_result);
         patched.partial_result = 0;
-        patched.result = result->result;
+        patched.result = NULL;
         wrapper->real->process_capture_result(wrapper->real, &patched);
         sanitized.unlock(locked_result);
         return;

@@ -1,0 +1,203 @@
+197-04-29 07:13:11.793     0     0 I         : ardbeg_imx179_power_on finished
+198-04-29 07:13:11.793     0     0 I         : imx179_get_sensor_id
+199-04-29 07:13:11.869   480   519 I am_pss  : [480,1000,system,172143616,162336768,0]
+200-04-29 07:13:11.895   268   580 D NvOsDebugPrintf: Get otp vendor 0x0, size: 1
+201-04-29 07:13:11.895   268  2378 D CameraWrapper: Get otp vendor 0x0, size: 1
+202-04-29 07:13:11.895     0     0 I         : imx179 module vendor ID: 0x08 06
+203-04-29 07:13:11.897   268   580 D NvOsDebugPrintf: NvCameraIspInitialize: disable3A=0x0
+204-04-29 07:13:11.897   268  2378 D CameraWrapper: NvCameraIspInitialize: disable3A=0x0
+205-04-29 07:13:11.900   268   580 D NvOsDebugPrintf: LSC: LSC surface is not based on full res!
+206-04-29 07:13:11.901   268  2378 D CameraWrapper: LSC: LSC surface is not based on full res!
+207-04-29 07:13:11.904   268   580 D NvOsDebugPrintf: -- NvIspAFinit -- min 176, max 544
+208-04-29 07:13:11.904   268  2378 D CameraWrapper: -- NvIspAFinit -- min 176, max 544
+209-04-29 07:13:11.904   268   580 D NvOsDebugPrintf: NvIspSetStats: WARNING: FM can't be enabled because AP is not enabled!!
+210-04-29 07:13:11.904   268  2378 D CameraWrapper: NvIspSetStats: WARNING: FM can't be enabled because AP is not enabled!!
+211-04-29 07:13:11.906   268   580 V Camera3Wrapper: camera3_device_open: got vendor camera device 0xA9CB9580
+212-04-29 07:13:11.907   268   580 V Camera3Wrapper: camera3_initialize->A9CB9530->A9CB9580
+213-04-29 07:13:11.909  2324  2366 I CAM_Profiler: [203.915ms] GUARD: CaptureModule.openCameraAndStartPreview() - [203.294ms] mOneCameraOpener.open()
+214-04-29 07:13:11.910  2324  2366 I CAM_Profiler: [203.915ms] GUARD: CaptureModule.openCameraAndStartPreview() - STOP
+215-04-29 07:13:11.913  2324  2355 I CAM_OneCamCreator: Camera support level: ZSL
+216---------- beginning of crash
+217:04-29 07:13:11.928  2324  2355 E AndroidRuntime: FATAL EXCEPTION: CaptureModule.mCameraHandler
+218-04-29 07:13:11.928  2324  2355 E AndroidRuntime: Process: com.android.camera2, PID: 2324
+219-04-29 07:13:11.928  2324  2355 E AndroidRuntime: java.lang.NullPointerException: Attempt to get length of null array
+220-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at com.android.camera.one.v2.OneCameraCharacteristicsImpl.getSupportedPictureSizes(OneCameraCharacteristicsImpl.java:72)
+221-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at com.android.camera.one.v2.common.PictureSizeCalculator.computeConfiguration(PictureSizeCalculator.java:147)
+222-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at com.android.camera.one.v2.OneCameraCreator.create(OneCameraCreator.java:110)
+223-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at com.android.camera.one.v2.Camera2OneCameraOpenerImpl$1.onOpened(Camera2OneCameraOpenerImpl.java:167)
+224-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at android.hardware.camera2.impl.CameraDeviceImpl$1.run(CameraDeviceImpl.java:139)
+225-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:790)
+226-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+227-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:164)
+228-04-29 07:13:11.928  2324  2355 E AndroidRuntime: 	at android.os.HandlerThread.run(HandlerThread.java:65)
+229-04-29 07:13:11.929   480   496 I am_crash: [2324,0,com.android.camera2,821607493,java.lang.NullPointerException,Attempt to get length of null array,OneCameraCharacteristicsImpl.java,72]
+230-04-29 07:13:11.930   480   496 W ActivityManager:   Force finishing activity com.android.camera2/com.android.camera.CameraActivity
+231-04-29 07:13:11.931   480   496 I am_finish_activity: [0,34654049,11,com.android.camera2/com.android.camera.CameraActivity,force-crash]
+232-04-29 07:13:11.932   480   496 I am_focused_stack: [0,0,1,finishActivity adjustFocus]
+233-04-29 07:13:11.932   480   496 I wm_task_moved: [8,1,0]
+234-04-29 07:13:11.933   480   496 I am_pause_activity: [0,34654049,com.android.camera2/com.android.camera.CameraActivity]
+235-04-29 07:13:11.934  2324  2324 V CAM_QuickActivity: START onPause: Activity = com.android.camera.CameraActivity@b8d64a0
+236-04-29 07:13:11.935  2324  2324 V CAM_QuickActivity: onPause --> onPauseTasks()
+237-04-29 07:13:11.935  2324  2324 V CAM_Profiler: [  0.000ms][ui] GUARD: CameraActivity.onPause - START
+238-04-29 07:13:11.940  2324  2324 D CAM_Camera2OneCamMgr: Getting First FRONT Camera
+239-04-29 07:13:11.944   480   521 I ActivityManager: Showing crash dialog for package com.android.camera2 u0
+240-04-29 07:13:11.947   480   520 I sysui_count: [window_time_0,61]
+241-04-29 07:13:11.947   480   520 I sysui_multi_action: [757,803,799,window_time_0,802,61]
+242-04-29 07:13:11.956   202   202 I auditd  : type=1400 audit(0.0:244): avc: denied { read } for comm="HwBinder:202_1" name="devices" dev="sysfs" ino=3452 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs:s0 tclass=dir permissive=1
+243-04-29 07:13:11.956   202   202 I HwBinder:202_1: type=1400 audit(0.0:244): avc: denied { read } for name="devices" dev="sysfs" ino=3452 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs:s0 tclass=dir permissive=1
+244-04-29 07:13:11.956   202   202 I auditd  : type=1400 audit(0.0:245): avc: denied { open } for comm="HwBinder:202_1" path="/sys/bus/iio/devices" dev="sysfs" ino=3452 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs:s0 tclass=dir permissive=1
+245-04-29 07:13:11.956   202   202 I HwBinder:202_1: type=1400 audit(0.0:245): avc: denied { open } for path="/sys/bus/iio/devices" dev="sysfs" ino=3452 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs:s0 tclass=dir permissive=1
+246-04-29 07:13:11.996   202   600 E SensorHAL: Failed to save calibration data.
+247-04-29 07:13:12.018     0     0 E gk20a.0 : unrecognized ioctl cmd: 0x8008486d
+248-04-29 07:13:12.029   202   600 D SensorHAL: lsm6db0_magn: power-off.
+249-04-29 07:13:12.031  2324  2324 V CAM_Profiler: [  0.000ms][ui] GUARD: CaptureModule.closeCamera() - START
+250-04-29 07:13:12.045   480  2067 D vndksupport: Loading /vendor/lib/hw/gralloc.tegra.so from current namespace instead of sphal namespace.
+251-04-29 07:13:12.048   480  2067 I system_server: android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasWideColorDisplay retrieved: 0
+252-04-29 07:13:12.048   480  2067 I OpenGLRenderer: Initialized EGL, version 1.4
+253-04-29 07:13:12.048   480  2067 D OpenGLRenderer: Swap behavior 2
+254-04-29 07:13:12.113   480   521 W Looper  : Dispatch took 110ms on android.ui, h=Handler (android.view.Choreographer$FrameHandler) {d48814d} cb=android.view.Choreographer$FrameDisplayEventReceiver@dd2b402 msg=0
+255-04-29 07:13:12.435   480   520 W ActivityManager: Activity pause timeout for ActivityRecord{210c761 u0 com.android.camera2/com.android.camera.CameraActivity t11 f}
+256-04-29 07:13:12.444   480   520 I am_set_resumed_activity: [0,org.lineageos.trebuchet/com.android.launcher3.searchlauncher.SearchLauncher,resumeTopActivityInnerLocked]
+257-04-29 07:13:12.455   480   520 I am_resume_activity: [0,227840267,8,org.lineageos.trebuchet/com.android.launcher3.searchlauncher.SearchLauncher]
+258-04-29 07:13:12.498   480   520 I dvm_lock_sample: [system_server,1,ActivityManager,33,AppWindowContainerController.java,675,void com.android.server.wm.AppWindowContainerController.resumeKeyDispatching(),WindowManagerService.java,1945,int com.android.server.wm.WindowManagerService.relayoutWindow(com.android.server.wm.Session, android.view.IWindow, int, android.view.WindowManager$LayoutParams, int, int, int, int, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.util.MergedConfiguration, android.view.Surface),6]
+259-04-29 07:13:12.548   480   520 I sysui_count: [window_time_0,1]
+260-04-29 07:13:12.549   480   520 I sysui_multi_action: [757,803,799,window_time_0,802,1]
+261-04-29 07:13:12.557   480  1170 W ActivityManager: Unable to start service Intent { act=com.android.launcher3.WINDOW_OVERLAY dat=app://org.lineageos.trebuchet:10009?v=7&cv=9 pkg=com.google.android.googlequicksearchbox } U=0: not found
+262-04-29 07:13:12.576  1551  1551 I am_on_resume_called: [0,com.android.launcher3.searchlauncher.SearchLauncher,RESUME_ACTIVITY]
+263-04-29 07:13:12.993   480   520 I am_destroy_activity: [0,34654049,11,com.android.camera2/com.android.camera.CameraActivity,finish-imm]
+264-04-29 07:13:13.008   480   520 I ActivityManager: Killing 1820:com.android.contacts/u0a7 (adj 906): empty #17
+265-04-29 07:13:13.009   480   520 I am_kill : [0,1820,com.android.contacts,906,empty #17]
+266-04-29 07:13:13.011   480   522 W system_server: kill(-1820, 9) failed: No such process
+267-04-29 07:13:13.039   480  1188 I am_proc_died: [0,1820,com.android.contacts,906,17]
+268-04-29 07:13:13.040   480  1188 I am_uid_stopped: 10007
+269-04-29 07:13:13.056   480   522 W system_server: kill(-1820, 9) failed: No such process
+270-04-29 07:13:13.056   480   522 I system_server: Successfully killed process cgroup uid 10007 pid 1820 in 45ms
+271-04-29 07:13:13.107  1551  2046 W OpenGLRenderer: Incorrectly called buildLayer on View: ShortcutAndWidgetContainer, destroying layer...
+272-04-29 07:13:13.107  1551  2046 W OpenGLRenderer: Incorrectly called buildLayer on View: ShortcutAndWidgetContainer, destroying layer...
+273-04-29 07:13:13.603   480   496 I sysui_action: [316,3]
+274-04-29 07:13:13.603   480   496 I sysui_multi_action: [757,316,758,4,759,3]
+275-04-29 07:13:13.604   480   496 I am_uid_stopped: 10014
+276-04-29 07:13:13.604   480   496 I ActivityManager: Killing 2324:com.android.camera2/u0a14 (adj 900): crash
+277-04-29 07:13:13.604   480   496 I am_kill : [0,2324,com.android.camera2,900,crash]
+278-04-29 07:13:13.605   480   522 W system_server: kill(-2324, 9) failed: No such process
+279-04-29 07:13:13.627   480   496 I wm_task_removed: [11,removeAppToken: last token]
+280-04-29 07:13:13.628   480   496 I wm_task_removed: [11,removeTask]
+281-04-29 07:13:13.628   480   496 I wm_stack_removed: 1
+282-04-29 07:13:13.633     0     0 I binder  : release 2324:2355 transaction 118460 out, still active
+283-04-29 07:13:13.635     0     0 I binder  : 279:279 transaction failed 29189, size 60-0
+284-04-29 07:13:13.636     0     0 I chatty  : uid=0(root) logd identical 1 line
+285-04-29 07:13:13.636     0     0 I binder  : 279:279 transaction failed 29189, size 60-0
+286-04-29 07:13:13.639   268   268 I Camera3-Device: disconnect: E
+287-04-29 07:13:13.639   268   268 V Camera3Wrapper: camera3_device_close
+288-04-29 07:13:13.639   268  2393 D NvOsDebugPrintf: NvCamScaler_OutputThread-- (error 0x0)
+289-04-29 07:13:13.639   268  2378 D CameraWrapper: NvCamScaler_OutputThread-- (error 0x0)
+290-04-29 07:13:13.645     0     0 I         : ardbeg_imx179_power_off finished
+291-04-29 07:13:13.649   480   522 W system_server: kill(-2324, 9) failed: No such process
+292-04-29 07:13:13.650     0     0 I         : ardbeg_ad5823_power_off
+293-04-29 07:13:13.654   268   268 D         : ~NvCameraTNR: ++
+294-04-29 07:13:13.654   268   268 D         : Release: ++
+295-04-29 07:13:13.655   268   268 D         : Release: --
+296-04-29 07:13:13.656   268   268 D         : ~NvCameraTNR: --
+297-04-29 07:13:13.656   268   268 I Camera3-Device: disconnect: X
+--
+490-04-29 07:13:14.562     0     0 I         : ardbeg_ad5823_power_on
+491-04-29 07:13:14.562     0     0 I         : ardbeg_imx179_power_on
+492-04-29 07:13:14.564     0     0 I         : ardbeg_imx179_power_on finished
+493-04-29 07:13:14.564     0     0 I         : imx179_get_sensor_id
+494-04-29 07:13:14.667   268  1284 D NvOsDebugPrintf: Get otp vendor 0x0, size: 1
+495-04-29 07:13:14.667     0     0 I         : imx179 module vendor ID: 0x08 06
+496-04-29 07:13:14.667   268  2462 D CameraWrapper: Get otp vendor 0x0, size: 1
+497-04-29 07:13:14.683   268  1284 D NvOsDebugPrintf: NvCameraIspInitialize: disable3A=0x0
+498-04-29 07:13:14.683   268  2462 D CameraWrapper: NvCameraIspInitialize: disable3A=0x0
+499-04-29 07:13:14.690   268  1284 D NvOsDebugPrintf: LSC: LSC surface is not based on full res!
+500-04-29 07:13:14.690   268  2462 D CameraWrapper: LSC: LSC surface is not based on full res!
+501-04-29 07:13:14.702   268  1284 D NvOsDebugPrintf: -- NvIspAFinit -- min 176, max 544
+502-04-29 07:13:14.703   268  2462 D CameraWrapper: -- NvIspAFinit -- min 176, max 544
+503-04-29 07:13:14.704   268  1284 D NvOsDebugPrintf: NvIspSetStats: WARNING: FM can't be enabled because AP is not enabled!!
+504-04-29 07:13:14.704   268  2462 D CameraWrapper: NvIspSetStats: WARNING: FM can't be enabled because AP is not enabled!!
+505-04-29 07:13:14.716   268  1284 V Camera3Wrapper: camera3_device_open: got vendor camera device 0xA9CB9580
+506-04-29 07:13:14.717   268  1284 V Camera3Wrapper: camera3_initialize->A9CB9530->A9CB9580
+507-04-29 07:13:14.733  2408  2446 I CAM_Profiler: [220.555ms] GUARD: CaptureModule.openCameraAndStartPreview() - [220.358ms] mOneCameraOpener.open()
+508-04-29 07:13:14.734  2408  2446 I CAM_Profiler: [220.555ms] GUARD: CaptureModule.openCameraAndStartPreview() - STOP
+509-04-29 07:13:14.743  2408  2439 I CAM_OneCamCreator: Camera support level: ZSL
+510:04-29 07:13:14.768  2408  2439 E AndroidRuntime: FATAL EXCEPTION: CaptureModule.mCameraHandler
+511-04-29 07:13:14.768  2408  2439 E AndroidRuntime: Process: com.android.camera2, PID: 2408
+512-04-29 07:13:14.768  2408  2439 E AndroidRuntime: java.lang.NullPointerException: Attempt to get length of null array
+513-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at com.android.camera.one.v2.OneCameraCharacteristicsImpl.getSupportedPictureSizes(OneCameraCharacteristicsImpl.java:72)
+514-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at com.android.camera.one.v2.common.PictureSizeCalculator.computeConfiguration(PictureSizeCalculator.java:147)
+515-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at com.android.camera.one.v2.OneCameraCreator.create(OneCameraCreator.java:110)
+516-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at com.android.camera.one.v2.Camera2OneCameraOpenerImpl$1.onOpened(Camera2OneCameraOpenerImpl.java:167)
+517-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at android.hardware.camera2.impl.CameraDeviceImpl$1.run(CameraDeviceImpl.java:139)
+518-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:790)
+519-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+520-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:164)
+521-04-29 07:13:14.768  2408  2439 E AndroidRuntime: 	at android.os.HandlerThread.run(HandlerThread.java:65)
+522-04-29 07:13:14.770   480  1125 I am_crash: [2408,0,com.android.camera2,819510341,java.lang.NullPointerException,Attempt to get length of null array,OneCameraCharacteristicsImpl.java,72]
+523-04-29 07:13:14.773   480  1125 W ActivityManager:   Force finishing activity com.android.camera2/com.android.camera.CameraActivity
+524-04-29 07:13:14.774   480  1125 I am_finish_activity: [0,161264124,11,com.android.camera2/com.android.camera.CameraActivity,force-crash]
+525-04-29 07:13:14.777   480  1125 I am_focused_stack: [0,0,1,finishActivity adjustFocus]
+526-04-29 07:13:14.780   480  1125 I wm_task_moved: [8,1,0]
+527-04-29 07:13:14.782   480  1125 I am_pause_activity: [0,161264124,com.android.camera2/com.android.camera.CameraActivity]
+528-04-29 07:13:14.783  2408  2408 V CAM_QuickActivity: START onPause: Activity = com.android.camera.CameraActivity@b8d64a0
+529-04-29 07:13:14.783  2408  2408 V CAM_QuickActivity: onPause --> onPauseTasks()
+530-04-29 07:13:14.784  2408  2408 V CAM_Profiler: [  0.000ms][ui] GUARD: CameraActivity.onPause - START
+531-04-29 07:13:14.788   480   520 I sysui_count: [window_time_0,2]
+532-04-29 07:13:14.788   480   520 I sysui_multi_action: [757,803,799,window_time_0,802,2]
+533-04-29 07:13:14.789   480   521 I ActivityManager: Showing crash dialog for package com.android.camera2 u0
+534-04-29 07:13:14.794  2408  2408 D CAM_Camera2OneCamMgr: Getting First FRONT Camera
+535-04-29 07:13:14.840   202   202 E SensorHAL: Failed to save calibration data.
+536-04-29 07:13:14.851     0     0 E gk20a.0 : unrecognized ioctl cmd: 0x8008486d
+537-04-29 07:13:14.869   480  2067 D vndksupport: Loading /vendor/lib/hw/gralloc.tegra.so from current namespace instead of sphal namespace.
+538-04-29 07:13:14.871   480  2067 I system_server: android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasWideColorDisplay retrieved: 0
+539-04-29 07:13:14.871   480  2067 I OpenGLRenderer: Initialized EGL, version 1.4
+540-04-29 07:13:14.871   480  2067 D OpenGLRenderer: Swap behavior 2
+541-04-29 07:13:14.873   202   202 D SensorHAL: lsm6db0_magn: power-off.
+542-04-29 07:13:14.880  2408  2408 V CAM_Profiler: [  0.000ms][ui] GUARD: CaptureModule.closeCamera() - START
+543-04-29 07:13:14.990   480   521 W Looper  : Dispatch took 146ms on android.ui, h=Handler (android.view.Choreographer$FrameHandler) {d48814d} cb=android.view.Choreographer$FrameDisplayEventReceiver@dd2b402 msg=0
+544-04-29 07:13:15.284   480   520 W ActivityManager: Activity pause timeout for ActivityRecord{99cb1fc u0 com.android.camera2/com.android.camera.CameraActivity t11 f}
+545-04-29 07:13:15.293   480   520 I am_set_resumed_activity: [0,org.lineageos.trebuchet/com.android.launcher3.searchlauncher.SearchLauncher,resumeTopActivityInnerLocked]
+546-04-29 07:13:15.303   480   520 I am_resume_activity: [0,227840267,8,org.lineageos.trebuchet/com.android.launcher3.searchlauncher.SearchLauncher]
+547-04-29 07:13:15.383   480   520 I sysui_count: [window_time_0,1]
+548-04-29 07:13:15.384   480   520 I sysui_multi_action: [757,803,799,window_time_0,802,1]
+549-04-29 07:13:15.388   480   495 W ActivityManager: Unable to start service Intent { act=com.android.launcher3.WINDOW_OVERLAY dat=app://org.lineageos.trebuchet:10009?v=7&cv=9 pkg=com.google.android.googlequicksearchbox } U=0: not found
+550-04-29 07:13:15.407  1551  1551 I am_on_resume_called: [0,com.android.launcher3.searchlauncher.SearchLauncher,RESUME_ACTIVITY]
+551-04-29 07:13:15.549   480  1187 I dvm_lock_sample: [system_server,1,Binder:480_5,75,WindowManagerService.java,2359,void com.android.server.wm.WindowManagerService.finishDrawingWindow(com.android.server.wm.Session, android.view.IWindow),WindowSurfacePlacer.java,107,void com.android.server.wm.WindowSurfacePlacer.lambda$-com_android_server_wm_WindowSurfacePlacer_5337(),15]
+552-04-29 07:13:15.646   480  1170 I dvm_lock_sample: [system_server,0,Binder:480_4,40,WindowManagerService.java,3177,boolean com.android.server.wm.WindowManagerService.isShowingDream(),-,1945,int com.android.server.wm.WindowManagerService.relayoutWindow(com.android.server.wm.Session, android.view.IWindow, int, android.view.WindowManager$LayoutParams, int, int, int, int, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.util.MergedConfiguration, android.view.Surface),8]
+553-04-29 07:13:15.669  1094  1118 I zygote  : NativeAlloc concurrent copying GC freed 14698(712KB) AllocSpace objects, 0(0B) LOS objects, 54% free, 4MB/10MB, paused 204us total 116.769ms
+554-04-29 07:13:15.852   480   520 I am_destroy_activity: [0,161264124,11,com.android.camera2/com.android.camera.CameraActivity,finish-imm]
+555-04-29 07:13:15.972  1551  2046 W OpenGLRenderer: Incorrectly called buildLayer on View: ShortcutAndWidgetContainer, destroying layer...
+556-04-29 07:13:15.972  1551  2046 W OpenGLRenderer: Incorrectly called buildLayer on View: ShortcutAndWidgetContainer, destroying layer...
+557-04-29 07:13:18.775   480  1125 I sysui_action: [316,1]
+558-04-29 07:13:18.775   480  1125 I sysui_multi_action: [757,316,758,4,759,1]
+559-04-29 07:13:18.776   480  1125 W ActivityManager:   Force finishing activity com.android.camera2/com.android.camera.CameraActivity
+560-04-29 07:13:18.777   480  1125 I am_destroy_activity: [0,161264124,11,com.android.camera2/com.android.camera.CameraActivity,finish-imm]
+561-04-29 07:13:18.802   480  1125 I wm_task_removed: [11,removeAppToken: last token]
+562-04-29 07:13:18.817   480  1125 I wm_task_removed: [11,removeTask]
+563-04-29 07:13:18.818   480  1125 I wm_stack_removed: 1
+564-04-29 07:13:18.819   480  1125 I am_uid_stopped: 10014
+565-04-29 07:13:18.819   480  1125 I ActivityManager: Killing 2408:com.android.camera2/u0a14 (adj 900): crash
+566-04-29 07:13:18.819   480  1125 I am_kill : [0,2408,com.android.camera2,900,crash]
+567-04-29 07:13:18.821   480   522 W system_server: kill(-2408, 9) failed: No such process
+568-04-29 07:13:18.825   480   521 W InputEventReceiver: Attempted to finish an input event but the input event receiver has already been disposed.
+569-04-29 07:13:18.852     0     0 E gk20a.0 : unrecognized ioctl cmd: 0x8008486d
+570-04-29 07:13:18.866   480   522 W system_server: kill(-2408, 9) failed: No such process
+571-04-29 07:13:18.870     0     0 I binder  : undelivered transaction 126034, process died.
+572-04-29 07:13:18.870     0     0 I binder  : undelivered transaction 126048, process died.
+573-04-29 07:13:18.870     0     0 I binder  : undelivered transaction 126047, process died.
+574-04-29 07:13:18.870     0     0 I binder  : 279:1361 transaction failed 29189, size 60-0
+575-04-29 07:13:18.872     0     0 I binder  : 279:1363 transaction failed 29189, size 60-0
+576-04-29 07:13:18.872     0     0 I binder  : 279:1361 transaction failed 29189, size 60-0
+577-04-29 07:13:18.874   480   549 W ActivityManager: setHasOverlayUi called on unknown pid: 2408
+578-04-29 07:13:18.876   268  2172 I Camera3-Device: disconnect: E
+579-04-29 07:13:18.876   268  2172 V Camera3Wrapper: camera3_device_close
+580-04-29 07:13:18.880   268  2477 D NvOsDebugPrintf: NvCamScaler_OutputThread-- (error 0x0)
+581-04-29 07:13:18.880     0     0 E gk20a.0 : unrecognized ioctl cmd: 0x8008486d
+582-04-29 07:13:18.881   268  2462 D CameraWrapper: NvCamScaler_OutputThread-- (error 0x0)
+583-04-29 07:13:18.890     0     0 I         : ardbeg_imx179_power_off finished
+584-04-29 07:13:18.900     0     0 I         : ardbeg_ad5823_power_off
+585-04-29 07:13:18.910   480   522 W system_server: kill(-2408, 9) failed: No such process
+586-04-29 07:13:18.911   272   272 D phs:ipc-loc: Socket 7: hangup from client "com.android.camera2"
+587-04-29 07:13:18.924     0     0 E gk20a.0 : unrecognized ioctl cmd: 0x8008486d
+588-04-29 07:13:18.937   268  2172 D         : ~NvCameraTNR: ++
+589-04-29 07:13:18.937   268  2172 D         : Release: ++
+590-04-29 07:13:18.939   268  2172 D         : Release: --

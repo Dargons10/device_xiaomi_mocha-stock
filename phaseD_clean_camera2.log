@@ -1,0 +1,279 @@
+--------- beginning of system
+04-29 05:49:01.644 I/ActivityManager(  438): Force stopping com.android.camera2 appid=10014 user=0: from pid 2929
+--------- beginning of events
+04-29 05:49:01.648 I/notification_cancel_all(  438): [1000,438,com.android.camera2,0,0,0,5,NULL]
+--------- beginning of main
+04-29 05:49:01.649 E/PhoneInterfaceManager( 1152): [PhoneIntfMgr] getCarrierPackageNamesForIntent: No UICC
+04-29 05:49:01.649 D/CarrierSvcBindHelper( 1152): No carrier app for: 0
+04-29 05:49:01.901 I/ActivityManager(  438): START u0 {flg=0x10000000 cmp=com.android.camera2/com.android.camera.CameraActivity} from uid 0
+04-29 05:49:01.903 I/wm_stack_created(  438): 1
+04-29 05:49:01.905 I/wm_task_created(  438): [21,1]
+04-29 05:49:01.907 I/wm_task_moved(  438): [21,1,0]
+04-29 05:49:01.908 I/am_focused_stack(  438): [0,1,0,reuseOrNewTask]
+04-29 05:49:01.909 I/wm_task_moved(  438): [21,1,0]
+04-29 05:49:01.914 I/am_create_task(  438): [0,21]
+04-29 05:49:01.914 I/am_create_activity(  438): [0,77603394,21,com.android.camera2/com.android.camera.CameraActivity,NULL,NULL,NULL,268435456]
+04-29 05:49:01.917 I/wm_task_moved(  438): [21,1,0]
+04-29 05:49:01.925 I/am_pause_activity(  438): [0,251997812,org.lineageos.trebuchet/com.android.launcher3.searchlauncher.SearchLauncher]
+04-29 05:49:01.930 I/am_on_paused_called( 1516): [0,com.android.launcher3.searchlauncher.SearchLauncher,handlePauseActivity]
+04-29 05:49:01.950 I/am_uid_running(  438): 10014
+04-29 05:49:01.993 I/am_proc_start(  438): [0,2931,10014,com.android.camera2,activity,com.android.camera2/com.android.camera.CameraActivity]
+04-29 05:49:01.993 I/ActivityManager(  438): Start proc 2931:com.android.camera2/u0a14 for activity com.android.camera2/com.android.camera.CameraActivity
+04-29 05:49:02.028 I/sysui_count(  438): [window_time_0,6]
+04-29 05:49:02.028 I/sysui_multi_action(  438): [757,803,799,window_time_0,802,6]
+04-29 05:49:02.045 I/am_proc_bound(  438): [0,2931,com.android.camera2]
+04-29 05:49:02.054 I/am_uid_active(  438): 10014
+04-29 05:49:02.055 I/am_restart_activity(  438): [0,77603394,21,com.android.camera2/com.android.camera.CameraActivity]
+04-29 05:49:02.059 I/am_set_resumed_activity(  438): [0,com.android.camera2/com.android.camera.CameraActivity,minimalResumeActivityLocked]
+04-29 05:49:02.185 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: CameraApp onCreate() - START
+04-29 05:49:02.186 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: FirstRunDetector getTimeOfFirstRun - START
+04-29 05:49:02.188 V/CAM_Profiler( 2931): [  1.851ms][ui] GUARD: FirstRunDetector getTimeOfFirstRun - [ 1.851ms] PreferenceManager.getDefaultSharedPreferences
+04-29 05:49:02.190 V/CAM_Profiler( 2931): [  3.845ms][ui] GUARD: FirstRunDetector getTimeOfFirstRun - [ 1.994ms] preferences.getLong
+04-29 05:49:02.190 V/CAM_Profiler( 2931): [  4.215ms][ui] GUARD: FirstRunDetector getTimeOfFirstRun - STOP
+04-29 05:49:02.190 V/CAM_Profiler( 2931): [  9.721ms][ui] GUARD: CameraApp onCreate() - [ 9.721ms] initializeTimeOfFirstRun
+04-29 05:49:02.192 V/CAM_Profiler( 2931): [ 11.014ms][ui] GUARD: CameraApp onCreate() - [ 1.293ms] UsageStatistics.initialize
+04-29 05:49:02.194 I/notification_cancel_all(  438): [10014,2931,com.android.camera2,0,0,64,9,NULL]
+04-29 05:49:02.195 V/CAM_Profiler( 2931): [ 13.723ms][ui] GUARD: CameraApp onCreate() - [ 2.709ms] clearNotifications
+04-29 05:49:02.195 V/CAM_Profiler( 2931): [ 13.723ms][ui] GUARD: CameraApp onCreate() - STOP
+04-29 05:49:02.199 D/vndksupport( 2931): Loading /system/lib/egl/libEGL_tegra.so from current namespace instead of sphal namespace.
+04-29 05:49:02.203 D/libEGL  ( 2931): loaded /system/lib/egl/libEGL_tegra.so
+04-29 05:49:02.204 I/        ( 2931): Attempting to load EGL implementation libEGL_tegra_impl
+04-29 05:49:02.214 I/        ( 2931): Loaded EGL implementation libEGL_tegra_impl
+04-29 05:49:02.215 D/vndksupport( 2931): Loading /system/lib/egl/libGLESv1_CM_tegra.so from current namespace instead of sphal namespace.
+04-29 05:49:02.216 D/libEGL  ( 2931): loaded /system/lib/egl/libGLESv1_CM_tegra.so
+04-29 05:49:02.237 D/vndksupport( 2931): Loading /system/lib/egl/libGLESv2_tegra.so from current namespace instead of sphal namespace.
+04-29 05:49:02.238 D/libEGL  ( 2931): loaded /system/lib/egl/libGLESv2_tegra.so
+04-29 05:49:02.242 V/CAM_QuickActivity( 2931): START onCreate: Activity = com.android.camera.CameraActivity@b26863f
+04-29 05:49:02.242 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: CameraActivity.onCreateTasks - START
+04-29 05:49:02.243 D/CAM_LocationManager( 2931): Using legacy location provider.
+04-29 05:49:02.258 D/CAM_MemoryManagerImpl( 2931): Max native memory: 358 MB
+04-29 05:49:02.264 W/SoundPool( 2931): Use of stream types is deprecated for operations other than volume control
+04-29 05:49:02.264 W/SoundPool( 2931): See the documentation of SoundPool() for what to use instead with android.media.AudioAttributes to qualify your playback use case
+04-29 05:49:02.264 I/CAM_OneCamFtrCnfgCrtr( 2931): CaptureModule? true
+--------- beginning of kernel
+04-29 05:49:02.269 E/gk20a.0 (    0): unrecognized ioctl cmd: 0x8008486d
+04-29 05:49:02.288 I/CAM_Profiler( 2931): [ 46.277ms][ui] GUARD: CameraActivity.onCreateTasks - [21.562ms] Glide.setup
+04-29 05:49:02.294 V/CAM_Profiler( 2931): [ 51.694ms][ui] GUARD: CameraActivity.onCreateTasks - [ 5.416ms] OneCameraManager.get
+04-29 05:49:02.310 V/NuMediaExtractor( 2931): setDataSource fd=40 (/system/media/audio/ui/camera_click.ogg), offset=0, length=5951
+04-29 05:49:02.310 I/CameraManagerGlobal( 2931): Connecting to camera service
+04-29 05:49:02.315 V/NuMediaExtractor( 2931): track of type 'audio/vorbis' does not publish bitrate
+04-29 05:49:02.315 V/CAM_SettingsManager( 2931): listeners: [com.android.camera.CameraActivity@b26863f]
+04-29 05:49:02.317 I/OMXMaster(  280): makeComponentInstance(OMX.google.vorbis.decoder) in android.hardwar process
+04-29 05:49:02.320 V/CAM_Profiler( 2931): [ 77.816ms][ui] GUARD: CameraActivity.onCreateTasks - [ 1.765ms] computePictureSizes
+04-29 05:49:02.360 W/CAM_Log ( 2931): Tag RoundedThumbnailView is 1 chars longer than limit.
+04-29 05:49:02.470 I/CAM_Profiler( 2931): [227.873ms][ui] GUARD: CameraActivity.onCreateTasks - [146.857ms] setContentView()
+04-29 05:49:02.502 I/CAM_Profiler( 2931): [259.607ms][ui] GUARD: CameraActivity.onCreateTasks - [31.734ms] Configure Camera UI
+04-29 05:49:02.521 V/CAM_CameraController( 2931): Closing camera
+04-29 05:49:02.522 W/CAM2PORT_AndCamAgntImp( 2931): Releasing camera without any camera opened.
+04-29 05:49:02.523 V/CAM_ModulesInfo( 2931): EnableCaptureModule = true
+04-29 05:49:02.529 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: new CaptureModule - START
+04-29 05:49:02.532 V/CAM_Profiler( 2931): [  3.441ms][ui] GUARD: new CaptureModule - STOP
+04-29 05:49:02.532 V/CAM_SettingsManager( 2931): listeners: [com.android.camera.CameraActivity@b26863f, com.android.camera.app.CameraAppUI@509850]
+04-29 05:49:02.550 V/CAM_SettingsManager( 2931): listeners: [com.android.camera.CameraActivity@b26863f, com.android.camera.app.CameraAppUI@509850, com.android.camera.ButtonManager@6056205]
+04-29 05:49:02.550 V/CAM_SettingsManager( 2931): listeners: [com.android.camera.CameraActivity@b26863f, com.android.camera.app.CameraAppUI@509850, com.android.camera.ButtonManager@6056205, com.android.camera.widget.IndicatorIconController@a324c8b]
+04-29 05:49:02.551 I/CAM_Profiler( 2931): [308.949ms][ui] GUARD: CameraActivity.onCreateTasks - [18.363ms] Init Current Module UI
+04-29 05:49:02.551 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: CaptureModule.init - START
+04-29 05:49:02.551 D/CAM_CaptureModule( 2931): init UseAutotransformUiLayout = false
+04-29 05:49:02.553 D/CAM_Camera2OneCamMgr( 2931): Getting First BACK Camera
+04-29 05:49:02.563 W/SoundPool( 2931): Use of stream types is deprecated for operations other than volume control
+04-29 05:49:02.563 W/SoundPool( 2931): See the documentation of SoundPool() for what to use instead with android.media.AudioAttributes to qualify your playback use case
+04-29 05:49:02.564 V/NuMediaExtractor( 2931): setDataSource fd=47 (/system/priv-app/Camera2/Camera2.apk), offset=6834592, length=19122
+04-29 05:49:02.569 V/NuMediaExtractor( 2931): setDataSource fd=51 (/system/media/audio/ui/camera_click.ogg), offset=0, length=5951
+04-29 05:49:02.569 I/CAM_Profiler( 2931): [ 17.291ms][ui] GUARD: CaptureModule.init - STOP
+04-29 05:49:02.569 I/CAM_Profiler( 2931): [326.899ms][ui] GUARD: CameraActivity.onCreateTasks - [17.951ms] Init CurrentModule
+04-29 05:49:02.571 V/NuMediaExtractor( 2931): track of type 'audio/vorbis' does not publish bitrate
+04-29 05:49:02.573 I/OMXMaster(  280): makeComponentInstance(OMX.google.vorbis.decoder) in android.hardwar process
+04-29 05:49:02.574 V/NFC     ( 2931): this device does not have NFC support
+04-29 05:49:02.574 V/NuMediaExtractor( 2931): track of type 'audio/vorbis' does not publish bitrate
+04-29 05:49:02.578 I/OMXMaster(  280): makeComponentInstance(OMX.google.vorbis.decoder) in android.hardwar process
+04-29 05:49:02.591 I/CAM_Profiler( 2931): [348.915ms][ui] GUARD: CameraActivity.onCreateTasks - STOP
+04-29 05:49:02.592 V/CAM_QuickActivity( 2931): END onCreate: Activity = com.android.camera.CameraActivity@b26863f
+04-29 05:49:02.593 V/CAM_QuickActivity( 2931): START onStart: Activity = com.android.camera.CameraActivity@b26863f
+04-29 05:49:02.597 I/am_uid_active(  438): 10008
+04-29 05:49:02.597 V/CAM_QuickActivity( 2931): END onStart: Activity = com.android.camera.CameraActivity@b26863f
+04-29 05:49:02.600 V/CAM_QuickActivity( 2931): START onResume: Activity = com.android.camera.CameraActivity@b26863f
+04-29 05:49:02.601 V/CAM_QuickActivity( 2931): onResume(): isKeyguardLocked() = false
+04-29 05:49:02.601 V/CAM_QuickActivity( 2931): onResume --> onResumeTasks()
+04-29 05:49:02.603 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: CameraActivity.resume - START
+04-29 05:49:02.603 V/CAM_CameraActivity( 2931): Build info: lineage_mocha-eng 8.1.0 OPM7.181205.001 22fd066923 test-keys
+04-29 05:49:02.609 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: CaptureModule.resume - START
+04-29 05:49:02.610 V/CAM_Profiler( 2931): [  1.321ms][ui] GUARD: CaptureModule.resume - [ 0.056ms] getRemoteShutterListener.onModuleReady
+04-29 05:49:02.616 D/CAM_Storage( 2931): External storage state=mounted
+04-29 05:49:02.624 I/auditd  (  198): type=1400 audit(0.0:338): avc: denied { search } for comm="sensors@1.0-ser" name="tegra12-i2c.0" dev="sysfs" ino=323 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=dir permissive=1
+04-29 05:49:02.624 I/sensors@1.0-ser(  198): type=1400 audit(0.0:338): avc: denied { search } for name="tegra12-i2c.0" dev="sysfs" ino=323 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=dir permissive=1
+04-29 05:49:02.624 I/auditd  (  198): type=1400 audit(0.0:339): avc: denied { write } for comm="sensors@1.0-ser" name="enable" dev="sysfs" ino=12896 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=file permissive=1
+04-29 05:49:02.624 I/sensors@1.0-ser(  198): type=1400 audit(0.0:339): avc: denied { write } for name="enable" dev="sysfs" ino=12896 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=file permissive=1
+04-29 05:49:02.624 I/auditd  (  198): type=1400 audit(0.0:340): avc: denied { open } for comm="sensors@1.0-ser" path="/sys/devices/platform/tegra12-i2c.0/i2c-0/0-0008/lsm6db0_magn.0/iio:device3/buffer/enable" dev="sysfs" ino=12896 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=file permissive=1
+04-29 05:49:02.624 I/sensors@1.0-ser(  198): type=1400 audit(0.0:340): avc: denied { open } for path="/sys/devices/platform/tegra12-i2c.0/i2c-0/0-0008/lsm6db0_magn.0/iio:device3/buffer/enable" dev="sysfs" ino=12896 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=file permissive=1
+04-29 05:49:02.624 I/auditd  (  198): type=1400 audit(0.0:341): avc: denied { getattr } for comm="sensors@1.0-ser" path="/sys/devices/platform/tegra12-i2c.0/i2c-0/0-0008/lsm6db0_magn.0/iio:device3/buffer/enable" dev="sysfs" ino=12896 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=file permissive=1
+04-29 05:49:02.624 I/sensors@1.0-ser(  198): type=1400 audit(0.0:341): avc: denied { getattr } for path="/sys/devices/platform/tegra12-i2c.0/i2c-0/0-0008/lsm6db0_magn.0/iio:device3/buffer/enable" dev="sysfs" ino=12896 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=file permissive=1
+04-29 05:49:02.625 D/CAM_Storage( 2931): External storage state=mounted
+04-29 05:49:02.636 V/CAM_CameraDataAdapter( 2931): retrieved photo metadata, number of items: 0
+04-29 05:49:02.636 V/CAM_CameraDataAdapter( 2931): retrieved video metadata, number of items: 0
+04-29 05:49:02.636 V/CAM_CameraDataAdapter( 2931): sorting video/photo metadata
+04-29 05:49:02.637 V/CAM_CameraDataAdapter( 2931): sorted video/photo metadata
+04-29 05:49:02.643 V/NuMediaExtractor( 2931): setDataSource fd=64 (/system/priv-app/Camera2/Camera2.apk), offset=6873096, length=7617
+04-29 05:49:02.646 V/NuMediaExtractor( 2931): track of type 'audio/vorbis' does not publish bitrate
+04-29 05:49:02.650 I/OMXMaster(  280): makeComponentInstance(OMX.google.vorbis.decoder) in android.hardwar process
+04-29 05:49:02.656 I/auditd  (  198): type=1400 audit(0.0:342): avc: denied { read } for comm="sensors@1.0-ser" name="enable" dev="sysfs" ino=12896 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=file permissive=1
+04-29 05:49:02.656 I/sensors@1.0-ser(  198): type=1400 audit(0.0:342): avc: denied { read } for name="enable" dev="sysfs" ino=12896 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs_nvi2c:s0 tclass=file permissive=1
+04-29 05:49:02.658 D/SensorHAL(  198): lsm6db0_magn: power-on.
+04-29 05:49:02.658 I/CAM_Profiler( 2931): [ 49.420ms][ui] GUARD: CaptureModule.resume - [34.079ms] mHeadingSensor.activate()
+04-29 05:49:02.659 I/CAM_Profiler( 2931): [ 49.420ms][ui] GUARD: CaptureModule.resume - STOP
+04-29 05:49:02.659 I/CAM_Profiler( 2931): [ 56.005ms][ui] GUARD: CameraActivity.resume - [50.151ms] mCurrentModule.resume
+04-29 05:49:02.660 V/CAM_Profiler( 2931): [ 57.006ms][ui] GUARD: CameraActivity.resume - [ 0.024ms] mPanoramaViewHelper.onResume()
+04-29 05:49:02.660 V/CAM_LcyLocProvider( 2931): starting location updates
+04-29 05:49:02.662 D/CAM_LcyLocProvider( 2931): provider does not exist provider doesn't exist: network
+04-29 05:49:02.663 D/CAM_LcyLocProvider( 2931): provider does not exist provider doesn't exist: gps
+04-29 05:49:02.663 D/CAM_LcyLocProvider( 2931): startReceivingLocationUpdates
+04-29 05:49:02.663 I/CAM_Profiler( 2931): [ 59.989ms][ui] GUARD: CameraActivity.resume - STOP
+04-29 05:49:02.663 V/CAM_QuickActivity( 2931): END onResume: Activity = com.android.camera.CameraActivity@b26863f
+04-29 05:49:02.664 I/am_on_resume_called( 2931): [0,com.android.camera.CameraActivity,LAUNCH_ACTIVITY]
+04-29 05:49:02.670 D/OpenGLRenderer( 2931): HWUI GL Pipeline
+04-29 05:49:02.672 E/WindowManager(  438): App trying to use insecure INPUT_FEATURE_NO_INPUT_CHANNEL flag. Ignoring
+04-29 05:49:02.674 V/CAM_FocusController( 2931): configurePreviewDimensions(RectF(0.0, 0.0, 0.0, 0.0))
+04-29 05:49:02.689 V/NuMediaExtractor( 2931): setDataSource fd=65 (/system/priv-app/Camera2/Camera2.apk), offset=6880776, length=7755
+04-29 05:49:02.694 V/NuMediaExtractor( 2931): track of type 'audio/vorbis' does not publish bitrate
+04-29 05:49:02.697 I/OMXMaster(  280): makeComponentInstance(OMX.google.vorbis.decoder) in android.hardwar process
+04-29 05:49:02.706 V/CAM_TexViewHelper( 2931): onLayoutChange
+04-29 05:49:02.707 V/CAM_TexViewHelper( 2931): updateTransform
+04-29 05:49:02.707 V/CAM_TexViewHelper( 2931): setAspectRatio: 0.0
+04-29 05:49:02.707 D/CAM_CaptureModule( 2931): updatePreviewTransform: 1536 x 2048
+04-29 05:49:02.710 V/CAM_TexViewHelper( 2931): setAspectRatio: NaN
+04-29 05:49:02.710 V/CAM_TexViewHelper( 2931): aspect ratio changed from: 0.0
+04-29 05:49:02.710 I/chatty  (    0): uid=0(root) logd identical 1 line
+04-29 05:49:02.717 V/CAM_CameraActivity( 2931): ignoring storage callback after activity pause
+04-29 05:49:02.717 V/CAM_CameraActivity( 2931): ignoring storage callback after activity pause
+04-29 05:49:02.727 D/CAM_MemoryQuery( 2931): timestamp=656615, availMem=865, totalMem=1935, totalPSS=12, lastTrimLevel=0, largeMemoryClass=512, nativePSS=4, dalvikPSS=2, otherPSS=5,threshold=144, lowMemory=false
+04-29 05:49:02.740 D/vndksupport( 2931): Loading /vendor/lib/hw/gralloc.tegra.so from current namespace instead of sphal namespace.
+04-29 05:49:02.744 I/com.android.camera2( 2931): android::hardware::configstore::V1_0::ISurfaceFlingerConfigs::hasWideColorDisplay retrieved: 0
+04-29 05:49:02.744 I/OpenGLRenderer( 2931): Initialized EGL, version 1.4
+04-29 05:49:02.744 D/OpenGLRenderer( 2931): Swap behavior 2
+04-29 05:49:02.802 I/        ( 2931): Loading GLESv2 implementation libGLESv2_tegra_impl
+04-29 05:49:02.809 D/vndksupport( 2931): Loading /vendor/lib/hw/android.hardware.graphics.mapper@2.0-impl.so from current namespace instead of sphal namespace.
+04-29 05:49:02.810 D/vndksupport( 2931): Loading /vendor/lib/hw/gralloc.tegra.so from current namespace instead of sphal namespace.
+04-29 05:49:02.812 D/vndksupport( 2931): Loading /vendor/lib/hw/gralloc.tegra.so from current namespace instead of sphal namespace.
+04-29 05:49:02.830 V/CAM_TexViewHelper( 2931): updateTransform
+04-29 05:49:02.830 V/CAM_CameraAppUI( 2931): SurfaceTexture is available
+04-29 05:49:02.830 D/CAM_CaptureModule( 2931): onSurfaceTextureAvailable
+04-29 05:49:02.830 D/CAM_CaptureModule( 2931): updatePreviewTransform: 1536 x 2048
+04-29 05:49:02.832 V/CAM_TexViewHelper( 2931): setAspectRatio: NaN
+04-29 05:49:02.832 V/CAM_TexViewHelper( 2931): aspect ratio changed from: NaN
+04-29 05:49:02.833 I/CAM_FocusRingView( 2931): Computing center via view bounds.
+04-29 05:49:02.833 V/CAM_Profiler( 2931): [  0.000ms] GUARD: CaptureModule.closeCamera() - START
+04-29 05:49:02.834 V/CAM_Profiler( 2931): [  0.459ms] GUARD: CaptureModule.closeCamera() - [ 0.459ms] mCameraOpenCloseLock.acquire()
+04-29 05:49:02.834 V/CAM_Profiler( 2931): [  0.775ms] GUARD: CaptureModule.closeCamera() - STOP
+04-29 05:49:02.834 V/CAM_Profiler( 2931): [  0.000ms] GUARD: CaptureModule.openCameraAndStartPreview() - START
+04-29 05:49:02.834 V/CAM_Profiler( 2931): [  0.202ms] GUARD: CaptureModule.openCameraAndStartPreview() - [ 0.202ms] Acquired mCameraOpenCloseLock
+04-29 05:49:02.835 D/CAM_Camera2OneCamMgr( 2931): Getting First BACK Camera
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): Unable to obtain picture sizes.
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): java.lang.NullPointerException: Attempt to get length of null array
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative.getStreamConfigurationMap(CameraMetadataNative.java:889)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative.-wrap3(Unknown Source:0)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative$5.getValue(CameraMetadataNative.java:540)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative.get(CameraMetadataNative.java:381)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative.get(CameraMetadataNative.java:352)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.CameraCharacteristics.get(CameraCharacteristics.java:207)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.one.v2.OneCameraCharacteristicsImpl.getSupportedPictureSizes(OneCameraCharacteristicsImpl.java:63)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.settings.ResolutionSetting.getPictureSize(ResolutionSetting.java:153)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.CaptureModule.openCameraAndStartPreview(CaptureModule.java:1363)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.CaptureModule.-wrap8(Unknown Source:0)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.CaptureModule$10.run(CaptureModule.java:653)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1162)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:636)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at java.lang.Thread.run(Thread.java:764)
+04-29 05:49:02.838 E/CAM_ResolutionSettings( 2931): Picture size setting is not set. Choose 0x0
+--------- beginning of crash
+04-29 05:49:02.839 E/AndroidRuntime( 2931): FATAL EXCEPTION: AsyncTask #2
+04-29 05:49:02.839 E/AndroidRuntime( 2931): Process: com.android.camera2, PID: 2931
+04-29 05:49:02.839 E/AndroidRuntime( 2931): java.lang.IllegalStateException
+04-29 05:49:02.839 E/AndroidRuntime( 2931): 	at com.google.common.base.Preconditions.checkState(Preconditions.java:158)
+04-29 05:49:02.839 E/AndroidRuntime( 2931): 	at com.android.camera.settings.ResolutionSetting.getPictureSize(ResolutionSetting.java:165)
+04-29 05:49:02.839 E/AndroidRuntime( 2931): 	at com.android.camera.CaptureModule.openCameraAndStartPreview(CaptureModule.java:1363)
+04-29 05:49:02.839 E/AndroidRuntime( 2931): 	at com.android.camera.CaptureModule.-wrap8(Unknown Source:0)
+04-29 05:49:02.839 E/AndroidRuntime( 2931): 	at com.android.camera.CaptureModule$10.run(CaptureModule.java:653)
+04-29 05:49:02.839 E/AndroidRuntime( 2931): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1162)
+04-29 05:49:02.839 E/AndroidRuntime( 2931): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:636)
+04-29 05:49:02.839 E/AndroidRuntime( 2931): 	at java.lang.Thread.run(Thread.java:764)
+04-29 05:49:02.840 I/am_crash(  438): [2931,0,com.android.camera2,821607493,java.lang.IllegalStateException,NULL,Preconditions.java,158]
+04-29 05:49:02.841 I/auditd  ( 2931): type=1400 audit(0.0:343): avc: denied { write } for comm="RenderThread" name="phsd.ctl" dev="mmcblk0p29" ino=98172 scontext=u:r:platform_app:s0:c512,c768 tcontext=u:object_r:system_data_file:s0 tclass=sock_file permissive=1
+04-29 05:49:02.841 I/RenderThread( 2931): type=1400 audit(0.0:343): avc: denied { write } for name="phsd.ctl" dev="mmcblk0p29" ino=98172 scontext=u:r:platform_app:s0:c512,c768 tcontext=u:object_r:system_data_file:s0 tclass=sock_file permissive=1
+04-29 05:49:02.841 W/ActivityManager(  438):   Force finishing activity com.android.camera2/com.android.camera.CameraActivity
+04-29 05:49:02.842 I/am_finish_activity(  438): [0,77603394,21,com.android.camera2/com.android.camera.CameraActivity,force-crash]
+04-29 05:49:02.843 I/am_focused_stack(  438): [0,0,1,finishActivity adjustFocus]
+04-29 05:49:02.843 I/wm_task_moved(  438): [8,1,0]
+04-29 05:49:02.844 I/am_pause_activity(  438): [0,77603394,com.android.camera2/com.android.camera.CameraActivity]
+04-29 05:49:02.848 I/sysui_count(  438): [window_time_0,0]
+04-29 05:49:02.848 I/sysui_multi_action(  438): [757,803,799,window_time_0,802,0]
+04-29 05:49:02.850 I/ActivityManager(  438): Showing crash dialog for package com.android.camera2 u0
+04-29 05:49:02.862 V/CAM_CameraDataAdapter( 2931): new photos query return num items: 0
+04-29 05:49:02.863 I/am_activity_launch_time(  438): [0,77603394,com.android.camera2/com.android.camera.CameraActivity,904,904]
+04-29 05:49:02.863 I/ActivityManager(  438): Displayed com.android.camera2/com.android.camera.CameraActivity: +904ms
+04-29 05:49:02.875 E/gk20a.0 (    0): unrecognized ioctl cmd: 0x8008486d
+04-29 05:49:02.877 V/CAM_QuickActivity( 2931): START onPause: Activity = com.android.camera.CameraActivity@b26863f
+04-29 05:49:02.877 V/CAM_QuickActivity( 2931): onPause --> onPauseTasks()
+04-29 05:49:02.877 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: CameraActivity.onPause - START
+04-29 05:49:02.880 V/CAM_ActvCamDevTrckr( 2931): Returning previously active camera: null
+04-29 05:49:02.880 E/CAM_CameraActivity( 2931): Retrieving Camera Setting Scope with -1
+04-29 05:49:02.885 I/auditd  (  198): type=1400 audit(0.0:344): avc: denied { read } for comm="HwBinder:198_1" name="devices" dev="sysfs" ino=3452 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs:s0 tclass=dir permissive=1
+04-29 05:49:02.885 I/HwBinder:198_1(  198): type=1400 audit(0.0:344): avc: denied { read } for name="devices" dev="sysfs" ino=3452 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs:s0 tclass=dir permissive=1
+04-29 05:49:02.885 I/auditd  (  198): type=1400 audit(0.0:345): avc: denied { open } for comm="HwBinder:198_1" path="/sys/bus/iio/devices" dev="sysfs" ino=3452 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs:s0 tclass=dir permissive=1
+04-29 05:49:02.885 I/HwBinder:198_1(  198): type=1400 audit(0.0:345): avc: denied { open } for path="/sys/bus/iio/devices" dev="sysfs" ino=3452 scontext=u:r:hal_sensors_default:s0 tcontext=u:object_r:sysfs:s0 tclass=dir permissive=1
+04-29 05:49:02.905 I/OpenGLRenderer(  438): Initialized EGL, version 1.4
+04-29 05:49:02.906 D/OpenGLRenderer(  438): Swap behavior 2
+04-29 05:49:02.956 E/SensorHAL(  198): Failed to save calibration data.
+04-29 05:49:02.989 D/SensorHAL(  198): lsm6db0_magn: power-off.
+04-29 05:49:02.989 W/hw-IPCThreadState(  198): All binder threads in pool (2 threads) busy for 102 ms
+04-29 05:49:02.990 V/CAM_Profiler( 2931): [  0.000ms][ui] GUARD: CaptureModule.closeCamera() - START
+04-29 05:49:03.346 W/ActivityManager(  438): Activity pause timeout for ActivityRecord{4a02242 u0 com.android.camera2/com.android.camera.CameraActivity t21 f}
+04-29 05:49:03.386 I/am_set_resumed_activity(  438): [0,org.lineageos.trebuchet/com.android.launcher3.searchlauncher.SearchLauncher,resumeTopActivityInnerLocked]
+04-29 05:49:03.396 I/am_resume_activity(  438): [0,251997812,8,org.lineageos.trebuchet/com.android.launcher3.searchlauncher.SearchLauncher]
+04-29 05:49:03.459 I/WindowManager(  438): Failed to capture screenshot of Token{3aae253 ActivityRecord{4a02242 u0 com.android.camera2/com.android.camera.CameraActivity t21 f}} appWin=Window{fe5fb08 u0 com.android.camera2/com.android.camera.CameraActivity} drawState=4
+04-29 05:49:03.487 I/dvm_lock_sample(  438): [system_server,1,Binder:438_6,77,WindowManagerService.java,1945,int com.android.server.wm.WindowManagerService.relayoutWindow(com.android.server.wm.Session, android.view.IWindow, int, android.view.WindowManager$LayoutParams, int, int, int, int, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.graphics.Rect, android.util.MergedConfiguration, android.view.Surface),-,2985,void com.android.server.wm.WindowManagerService.continueSurfaceLayout(),15]
+04-29 05:49:03.489 I/sysui_count(  438): [window_time_0,1]
+04-29 05:49:03.490 I/sysui_multi_action(  438): [757,803,799,window_time_0,802,1]
+04-29 05:49:03.517 I/dvm_lock_sample(  438): [system_server,1,android.anim,100,WindowAnimator.java,102,void com.android.server.wm.WindowAnimator.lambda$-com_android_server_wm_WindowAnimator_3951(long),WindowManagerService.java,2985,void com.android.server.wm.WindowManagerService.continueSurfaceLayout(),20]
+04-29 05:49:03.562 I/am_on_resume_called( 1516): [0,com.android.launcher3.searchlauncher.SearchLauncher,RESUME_ACTIVITY]
+04-29 05:49:03.587 I/dvm_lock_sample(  438): [system_server,1,android.display,28,WindowManagerService.java,5332,void com.android.server.wm.WindowManagerService$H.handleMessage(android.os.Message),WindowSurfacePlacer.java,107,void com.android.server.wm.WindowSurfacePlacer.lambda$-com_android_server_wm_WindowSurfacePlacer_5337(),5]
+04-29 05:49:03.673 I/am_destroy_activity(  438): [0,77603394,21,com.android.camera2/com.android.camera.CameraActivity,finish-imm]
+04-29 05:49:04.118 W/OpenGLRenderer( 1516): Incorrectly called buildLayer on View: ShortcutAndWidgetContainer, destroying layer...
+04-29 05:49:04.118 W/OpenGLRenderer( 1516): Incorrectly called buildLayer on View: ShortcutAndWidgetContainer, destroying layer...
+04-29 05:49:06.787 I/auditd  (  438): type=1400 audit(0.0:346): avc: denied { read } for comm="android.bg" name="nvmap" dev="debugfs" ino=4404 scontext=u:r:system_server:s0 tcontext=u:object_r:debugfs_nvmap:s0 tclass=dir permissive=1
+04-29 05:49:06.787 I/android.bg(  438): type=1400 audit(0.0:346): avc: denied { read } for name="nvmap" dev="debugfs" ino=4404 scontext=u:r:system_server:s0 tcontext=u:object_r:debugfs_nvmap:s0 tclass=dir permissive=1
+04-29 05:49:06.787 I/auditd  (  438): type=1400 audit(0.0:347): avc: denied { open } for comm="android.bg" path="/sys/kernel/debug/nvmap" dev="debugfs" ino=4404 scontext=u:r:system_server:s0 tcontext=u:object_r:debugfs_nvmap:s0 tclass=dir permissive=1
+04-29 05:49:06.787 I/android.bg(  438): type=1400 audit(0.0:347): avc: denied { open } for path="/sys/kernel/debug/nvmap" dev="debugfs" ino=4404 scontext=u:r:system_server:s0 tcontext=u:object_r:debugfs_nvmap:s0 tclass=dir permissive=1
+04-29 05:49:06.862 I/am_pss  (  438): [1516,10007,org.lineageos.trebuchet,142174208,133672960,0]
+04-29 05:49:07.618 I/sysui_action(  438): [316,1]
+04-29 05:49:07.618 I/sysui_multi_action(  438): [757,316,758,4,759,1]
+04-29 05:49:07.618 W/ActivityManager(  438):   Force finishing activity com.android.camera2/com.android.camera.CameraActivity
+04-29 05:49:07.618 I/am_destroy_activity(  438): [0,77603394,21,com.android.camera2/com.android.camera.CameraActivity,finish-imm]
+04-29 05:49:07.629 I/wm_task_removed(  438): [21,removeAppToken: last token]
+04-29 05:49:07.630 I/wm_task_removed(  438): [21,removeTask]
+04-29 05:49:07.630 I/wm_stack_removed(  438): 1
+04-29 05:49:07.643 I/am_uid_stopped(  438): 10014
+04-29 05:49:07.643 I/ActivityManager(  438): Killing 2931:com.android.camera2/u0a14 (adj 900): crash
+04-29 05:49:07.644 I/am_kill (  438): [0,2931,com.android.camera2,900,crash]
+04-29 05:49:07.645 W/system_server(  438): kill(-2931, 9) failed: No such process
+04-29 05:49:07.668 E/binder  (    0): 2931: binder_alloc_buf, no vma
+04-29 05:49:07.668 I/binder  (    0): 438:1504 transaction failed 29201, size 4-0
+04-29 05:49:07.668 I/binder  (    0): send failed reply for transaction 184188 to 2931:2973
+04-29 05:49:07.668 E/gk20a.0 (    0): unrecognized ioctl cmd: 0x8008486d
+04-29 05:49:07.680 W/ActivityManager(  438): setHasOverlayUi called on unknown pid: 2931
+04-29 05:49:07.680 I/binder  (    0): 276:1363 transaction failed 29189, size 60-0
+04-29 05:49:07.680 I/binder  (    0): 276:276 transaction failed 29189, size 60-0
+04-29 05:49:07.681 I/binder  (    0): 276:1363 transaction failed 29189, size 60-0
+04-29 05:49:07.690 W/system_server(  438): kill(-2931, 9) failed: No such process
+04-29 05:49:07.695 D/phs:ipc-loc(  269): Socket 12: hangup from client "com.android.camera2"
+04-29 05:49:07.735 W/system_server(  438): kill(-2931, 9) failed: No such process
+04-29 05:49:07.735 I/system_server(  438): Successfully killed process cgroup uid 10014 pid 2931 in 90ms
+04-29 05:49:07.813 W/AppOps  (  438): Finishing op nesting under-run: uid 1000 pkg android code 24 time=0 duration=0 nesting=0
+04-29 05:49:12.413 I/        (    0): bq27x00 BMS soc 100 100 v 4153000 i 79000 t 270 c 20 rm 3986 4484 fcc 3994 4492 flag 229
+04-29 05:49:12.435 W/healthd (    0): battery l=100 v=4153 t=27.0 h=2 st=2 c=79 fc=4492000 cc=20 chg=u
+04-29 05:49:12.541 D/LightsService(  438): Excessive delay setting light
+04-29 05:49:13.870 D/WificondControl(  438): Scan result ready event
+04-29 05:49:13.904 W/WifiConfigManager(  438): Looking up network with invalid networkId -1
+04-29 05:49:15.450 W/healthd (    0): battery l=100 v=4168 t=27.0 h=2 st=2 c=-23 fc=4492000 cc=20 chg=u
+04-29 05:49:15.556 D/LightsService(  438): Excessive delay setting light
+04-29 05:49:15.559 W/zygote  (  438): Long monitor contention with owner Binder:438_9 (2986) at void com.android.server.BatteryService.update(android.os.BatteryProperties)(BatteryService.java:337) waiters=0 in boolean com.android.server.BatteryService$LocalService.isPowered(int) for 103ms
+04-29 05:49:15.560 I/dvm_lock_sample(  438): [system_server,1,PowerManagerService,103,BatteryService.java,996,boolean com.android.server.BatteryService$LocalService.isPowered(int),-,337,void com.android.server.BatteryService.update(android.os.BatteryProperties),20]
+04-29 05:49:17.978 D/logd    (    0): logdr: UID=0 GID=0 PID=2988 n tail=0 logMask=7f pid=0 start=0ns timeout=0ns

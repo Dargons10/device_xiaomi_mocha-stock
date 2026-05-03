@@ -1,0 +1,20 @@
+04-29 05:49:02.522 W/CAM2PORT_AndCamAgntImp( 2931): Releasing camera without any camera opened.
+04-29 05:49:02.601 V/CAM_QuickActivity( 2931): onResume(): isKeyguardLocked() = false
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): Unable to obtain picture sizes.
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): java.lang.NullPointerException: Attempt to get length of null array
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative.getStreamConfigurationMap(CameraMetadataNative.java:889)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative.-wrap3(Unknown Source:0)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative$5.getValue(CameraMetadataNative.java:540)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative.get(CameraMetadataNative.java:381)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.impl.CameraMetadataNative.get(CameraMetadataNative.java:352)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at android.hardware.camera2.CameraCharacteristics.get(CameraCharacteristics.java:207)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.one.v2.OneCameraCharacteristicsImpl.getSupportedPictureSizes(OneCameraCharacteristicsImpl.java:63)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.settings.ResolutionSetting.getPictureSize(ResolutionSetting.java:153)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.CaptureModule.openCameraAndStartPreview(CaptureModule.java:1363)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.CaptureModule.-wrap8(Unknown Source:0)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at com.android.camera.CaptureModule$10.run(CaptureModule.java:653)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1162)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:636)
+04-29 05:49:02.838 E/CAM_OneCamCharImpl( 2931): 	at java.lang.Thread.run(Thread.java:764)
+04-29 05:49:02.839 E/AndroidRuntime( 2931): FATAL EXCEPTION: AsyncTask #2
+04-29 05:49:02.839 E/AndroidRuntime( 2931): Process: com.android.camera2, PID: 2931

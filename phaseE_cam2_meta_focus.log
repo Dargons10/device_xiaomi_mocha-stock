@@ -1,0 +1,18 @@
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: Unable to obtain picture sizes.
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: java.lang.NullPointerException: Attempt to get length of null array
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at android.hardware.camera2.impl.CameraMetadataNative.getStreamConfigurationMap(CameraMetadataNative.java:889)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at android.hardware.camera2.impl.CameraMetadataNative.-wrap3(Unknown Source:0)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at android.hardware.camera2.impl.CameraMetadataNative$5.getValue(CameraMetadataNative.java:540)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at android.hardware.camera2.impl.CameraMetadataNative.get(CameraMetadataNative.java:381)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at android.hardware.camera2.impl.CameraMetadataNative.get(CameraMetadataNative.java:352)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at android.hardware.camera2.CameraCharacteristics.get(CameraCharacteristics.java:207)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at com.android.camera.one.v2.OneCameraCharacteristicsImpl.getSupportedPictureSizes(OneCameraCharacteristicsImpl.java:63)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at com.android.camera.settings.ResolutionSetting.getPictureSize(ResolutionSetting.java:153)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at com.android.camera.CaptureModule.openCameraAndStartPreview(CaptureModule.java:1363)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at com.android.camera.CaptureModule.-wrap8(Unknown Source:0)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at com.android.camera.CaptureModule$10.run(CaptureModule.java:653)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1162)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:636)
+04-29 05:50:17.899  3002  3045 E CAM_OneCamCharImpl: 	at java.lang.Thread.run(Thread.java:764)
+04-29 05:50:17.900  3002  3045 E CAM_ResolutionSettings: Picture size setting is not set. Choose 0x0
+04-29 05:50:17.901  3002  3045 E AndroidRuntime: 	at com.android.camera.settings.ResolutionSetting.getPictureSize(ResolutionSetting.java:165)
