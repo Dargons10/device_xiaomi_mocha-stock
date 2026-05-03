@@ -1,7 +1,7 @@
 diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3.2/default/CameraDeviceSession.cpp
 --- a/camera/device/3.2/default/CameraDeviceSession.cpp
 +++ b/camera/device/3.2/default/CameraDeviceSession.cpp
-@@ -1215,11 +1215,23 @@ void CameraDeviceSession::sProcessCaptureResult(
+@@ -1215,11 +1215,17 @@ void CameraDeviceSession::sProcessCaptureResult(
      CaptureResult result;
      result.frameNumber = frameNumber;
      result.fmqResultSize = 0;
@@ -9,22 +9,14 @@ diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3
 -    convertToHidl(hal_result->result, &result.result);
 -    if (nullptr != hal_result->result) {
 +
-+    // Legacy Tegra HAL may emit malformed partial_result counters and
-+    // metadata payloads that crash conversion in 8.1 camera interfaces.
-+    // Keep callback/buffer flow alive but drop metadata for malformed
-+    // partial callbacks.
-+    bool malformedPartial =
-+            (hal_result->partial_result == 0 || hal_result->partial_result > 16);
-+    if (malformedPartial) {
-+        result.partialResult = 0;
-+    } else {
-+        result.partialResult = hal_result->partial_result;
-+        convertToHidl(hal_result->result, &result.result);
-+    }
++    // Legacy Tegra camera blobs emit malformed metadata and partial counters
++    // that crash in CameraDeviceSession::sProcessCaptureResult. Forward only
++    // buffer status callbacks (no metadata) to keep stream/buffer flow alive.
++    result.partialResult = 0;
++    result.result.resize(0);
 +
-+    if (!malformedPartial && nullptr != hal_result->result) {
++    if (false && nullptr != hal_result->result) {
          bool resultOverriden = false;
          Mutex::Autolock _l(d->mInflightLock);
  
          // Derive some new keys for backward compatibility
-         if (d->mDerivePostRawSensKey) {
