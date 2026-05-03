@@ -1,7 +1,7 @@
 diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3.2/default/CameraDeviceSession.cpp
 --- a/camera/device/3.2/default/CameraDeviceSession.cpp
 +++ b/camera/device/3.2/default/CameraDeviceSession.cpp
-@@ -1218,4 +1218,9 @@
+@@ -1218,4 +1218,8 @@
 -   result.partialResult = hal_result->partial_result;
 -   convertToHidl(hal_result->result, &result.result);
 -   if (nullptr != hal_result->result) {
