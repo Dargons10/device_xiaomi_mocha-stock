@@ -1,7 +1,7 @@
 diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3.2/default/CameraDeviceSession.cpp
 --- a/camera/device/3.2/default/CameraDeviceSession.cpp
 +++ b/camera/device/3.2/default/CameraDeviceSession.cpp
-@@ -1215,10 +1215,14 @@ void CameraDeviceSession::sProcessCaptureResult(
+@@ -1215,10 +1215,13 @@ void CameraDeviceSession::sProcessCaptureResult(
      CaptureResult result;
      result.frameNumber = frameNumber;
      result.fmqResultSize = 0;
