@@ -1,21 +1,45 @@
 diff --git a/camera/device/3.2/default/CameraDeviceSession.cpp b/camera/device/3.2/default/CameraDeviceSession.cpp
 --- a/camera/device/3.2/default/CameraDeviceSession.cpp
 +++ b/camera/device/3.2/default/CameraDeviceSession.cpp
-@@ -1215,10 +1215,13 @@ void CameraDeviceSession::sProcessCaptureResult(
+@@ -1179,6 +1179,12 @@ void CameraDeviceSession::sProcessCaptureResult(
+     CameraDeviceSession *d =
+             const_cast<CameraDeviceSession*>(static_cast<const CameraDeviceSession*>(cb));
+
++    // Guard against null result from legacy Tegra blobs
++    if (hal_result == nullptr) {
++        ALOGE("%s: hal_result is null, ignoring", __FUNCTION__);
++        return;
++    }
++
+     uint32_t frameNumber = hal_result->frame_number;
+     bool hasInputBuf = (hal_result->input_buffer != nullptr);
+     size_t numOutputBufs = hal_result->num_output_buffers;
+@@ -1215,8 +1221,14 @@ void CameraDeviceSession::sProcessCaptureResult(
      CaptureResult result;
      result.frameNumber = frameNumber;
      result.fmqResultSize = 0;
 -    result.partialResult = hal_result->partial_result;
 -    convertToHidl(hal_result->result, &result.result);
--    if (nullptr != hal_result->result) {
--        bool resultOverriden = false;
-+    // Legacy Tegra blobs may return malformed metadata/partial counters.
-+    // Avoid metadata conversion crashes while still delivering buffer callbacks.
-+    result.partialResult = 0;
-+    result.result.resize(0);
-+
-+    if (false && nullptr != hal_result->result) {
-+        bool resultOverriden = false;
++    // Legacy Tegra blobs may send invalid partial_result values (0 or >16).
++    // Sanitize to avoid framework issues.
++    if (hal_result->partial_result > 0 && hal_result->partial_result <= 16) {
++        result.partialResult = hal_result->partial_result;
++    } else {
++        ALOGI("%s: sanitizing partial_result %u -> 0 for frame %u",
++                __FUNCTION__, hal_result->partial_result, frameNumber);
++        result.partialResult = 0;
++    }
+     if (nullptr != hal_result->result) {
+         bool resultOverriden = false;
          Mutex::Autolock _l(d->mInflightLock);
-
-         // Derive some new keys for backward compatibility
+@@ -1251,6 +1263,9 @@ void CameraDeviceSession::sProcessCaptureResult(
+         if (resultOverriden) {
+             const camera_metadata_t *metaBuffer =
+                     d->mOverridenResult.getAndLock();
+             convertToHidl(metaBuffer, &result.result);
+             d->mOverridenResult.unlock(metaBuffer);
++        } else {
++            // No override needed - convert raw metadata directly
++            convertToHidl(hal_result->result, &result.result);
+         }
+     }

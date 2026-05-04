@@ -1,3 +1,11 @@
+on early-fs
+    mknod /dev/video0 c 81 0
+    mknod /dev/video1 c 81 1
+    chmod 0660 /dev/video0 /dev/video1
+    chown media camera /dev/video0 /dev/video1
+    ln -s /dev/imx179 /dev/video0
+    ln -s /dev/ov5693 /dev/video1
+
 #Copyright (c) 2011-2014 NVIDIA Corporation.  All Rights Reserved.
 #
 #NVIDIA Corporation and its licensors retain all intellectual property and
@@ -40,6 +48,7 @@ on init
     setprop sys.esrd.check_screen_off 1
     chown system system /sys/power/sysedp/batmon/esr
     chown system system /sys/bus/i2c/devices/1-0040/iio_device/running_mode
+    export LD_SHIM_LIBS "/system/vendor/lib/libnvomxadaptor.so|libmocha_omx.so:/system/lib/hw/camera.vendor.tegra.so|libmocha_camera.so:/system/lib/hw/camera.vendor.tegra.so|libmocha_libc.so"
    
 on property:dev.bootcomplete=1
     start init_renderer
@@ -71,4 +80,4 @@ service uim /system/bin/brcm-uim-sysfs
     class late_start
     user root
     group bluetooth net_bt_admin net_bt
-    seclabel u:r:uim:s0
+    #seclabel u:r:uim:s0

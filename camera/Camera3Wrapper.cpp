@@ -99,7 +99,13 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
                 result->frame_number, result->partial_result, result->result, result->output_buffers);
     }
 
-    if (result == NULL || result->result == NULL) {
+    // Drop null results from legacy Tegra blobs to prevent HIDL layer crashes
+    if (result == NULL) {
+        ALOGE("%s: dropping null result from vendor blob", __FUNCTION__);
+        return;
+    }
+
+    if (result->result == NULL) {
         wrapper->real->process_capture_result(wrapper->real, result);
         return;
     }
@@ -115,7 +121,11 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
 
     camera3_capture_result_t patched = *result;
     const camera_metadata_t* locked_result = sanitized.getAndLock();
-    if (patched.partial_result == 0 || patched.partial_result > 16) {
+    if (locked_result == NULL) {
+        ALOGE("%s: frame=%u null locked_result, skipping", __FUNCTION__, patched.frame_number);
+        return;
+    }
+    if (patched.partial_result == 0 || patched.partial_result > 16 || patched.result == NULL) {
         ALOGI("%s: frame=%u stripping malformed partial_result=%u metadata",
                 __FUNCTION__, patched.frame_number, patched.partial_result);
         patched.partial_result = 0;
@@ -194,10 +204,14 @@ static int camera3_initialize(const camera3_device_t *device, const camera3_call
         }
     }
 
-    // Disable callback wrapping for now; legacy blobs may emit non-standard
-    // callback payloads that crash through wrapper mediation.
-    (void)wrapper_dev;
-    return VENDOR_CALL(device, initialize, callback_ops);
+    // Set up callback wrapping to intercept vendor results
+    // This allows us to filter null results and sanitize malformed metadata
+    wrapper_dev->callback_ops->real = callback_ops;
+    wrapper_dev->callback_ops->camera_id = wrapper_dev->id;
+    wrapper_dev->callback_ops->base.process_capture_result = camera3_process_capture_result_callback;
+    wrapper_dev->callback_ops->base.notify = camera3_notify_callback;
+
+    return VENDOR_CALL(device, initialize, &wrapper_dev->callback_ops->base);
 }
 
 static int camera3_configure_streams(const camera3_device *device, camera3_stream_configuration_t *stream_list)
