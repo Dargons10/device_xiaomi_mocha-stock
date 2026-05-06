@@ -125,18 +125,19 @@ static void camera3_process_capture_result_callback(const camera3_callback_ops_t
         ALOGE("%s: frame=%u null locked_result, skipping", __FUNCTION__, patched.frame_number);
         return;
     }
-    if (patched.partial_result == 0 || patched.partial_result > 16 || patched.result == NULL) {
-        ALOGI("%s: frame=%u stripping malformed partial_result=%u metadata",
-                __FUNCTION__, patched.frame_number, patched.partial_result);
-        patched.partial_result = 0;
-        patched.result = NULL;
-        wrapper->real->process_capture_result(wrapper->real, &patched);
-        sanitized.unlock(locked_result);
-        return;
-    }
+
+    // More tolerant to broken vendor blob results
+    // Vendor blob may pass garbage partial_result or corrupted metadata pointers
+    // Use our sanitized metadata regardless of vendor's state
+    ALOGI_IF(patched.partial_result == 0 || patched.partial_result > 16 || patched.result == NULL,
+            "%s: frame=%u vendor has garbage partial_result=%u, using sanitized",
+            __FUNCTION__, patched.frame_number, patched.partial_result);
+
+    patched.partial_result = 0;
     patched.result = locked_result;
     wrapper->real->process_capture_result(wrapper->real, &patched);
-    sanitized.unlock(locked_result);
+
+    // The metadata is now owned by the framework
 }
 
 static int check_vendor_module()
@@ -297,14 +298,24 @@ static int camera3_register_stream_buffers(const camera3_device *device, const c
 
 static const camera_metadata_t *camera3_construct_default_request_settings(const camera3_device_t *device, int type)
 {
-    ALOGV("%s->%08X->%08X", __FUNCTION__, (uintptr_t)device,
-        (uintptr_t)(((wrapper_camera3_device_t*)device)->vendor));
+    ALOGI("%s: device=%p vendor=%p type=%d", __FUNCTION__, device,
+        (void*)(((wrapper_camera3_device_t*)device)->vendor), type);
 
-    if (!device)
+    if (!device) {
+        ALOGE("%s: null device", __FUNCTION__);
         return NULL;
+    }
 
+    ALOGI("%s: calling vendor construct_default_request_settings", __FUNCTION__);
     android::CameraMetadata metadata;
     metadata = VENDOR_CALL(device, construct_default_request_settings, type);
+    
+    if (metadata.isEmpty()) {
+        ALOGE("%s: vendor returned empty metadata for type %d", __FUNCTION__, type);
+        return NULL;
+    }
+    
+    ALOGI("%s: vendor returned metadata with %zu entries", __FUNCTION__, metadata.entryCount());
     return camera3_fixup_construct_default_request_settings(metadata);
 }
 
@@ -315,6 +326,11 @@ static int camera3_process_capture_request(const camera3_device_t *device, camer
 
     if (!device)
         return -1;
+
+    if (request == NULL || request->num_output_buffers == 0 || request->output_buffers == NULL) {
+        ALOGE("%s: invalid capture request - dropping", __FUNCTION__);
+        return -EINVAL;
+    }
 
     return VENDOR_CALL(device, process_capture_request, request);
 }

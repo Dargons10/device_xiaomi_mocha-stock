@@ -87,6 +87,14 @@ PRODUCT_PACKAGES += \
     libpowerservice_client \
     libmocha_libc
 
+# Legacy camera support
+PRODUCT_PACKAGES += \
+    camera.device@1.0-impl
+
+# OpenCamera as default camera app
+PRODUCT_PACKAGES += \
+    OpenCamera
+
 # Comm Permissions
 PRODUCT_COPY_FILES += \
     frameworks/native/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \
@@ -112,13 +120,13 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     setup_fs
 
-# FM
-PRODUCT_PACKAGES += \
-    android.hardware.broadcastradio@1.0-impl \
-    FMRadio \
-    brcm-uim-sysfs \
-    libfmjni \
-    libfmradio.v4l2-fm
+# FM Radio (Broadcom) - Disabled, missing dependencies
+# PRODUCT_PACKAGES += \
+#     android.hardware.broadcastradio@1.0-impl \
+#     FMRadio \
+#     libfmjni \
+#     libfmradio.v4l2-fm \
+#     brcm-uim-sysfs
 
 # Gatekeeper
 PRODUCT_PACKAGES += \
@@ -307,6 +315,9 @@ PRODUCT_PACKAGES += \
 # Wifi
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/wifi/dhcpcd.conf:system/etc/dhcpcd/dhcpcd.conf 
+
+# Broadcom FM Radio - Disabled
+# $(call inherit-product-if-exists, hardware/broadcom/fm/Android.mk)
 
 # Wifi
 # All Shield devices xurrently use broadcom wifi / bluetooth modules

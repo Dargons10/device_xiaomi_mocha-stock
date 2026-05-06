@@ -1,10 +1,11 @@
 on early-fs
-    mknod /dev/video0 c 81 0
-    mknod /dev/video1 c 81 1
-    chmod 0660 /dev/video0 /dev/video1
-    chown media camera /dev/video0 /dev/video1
-    ln -s /dev/imx179 /dev/video0
-    ln -s /dev/ov5693 /dev/video1
+    # No need to create V4L2 nodes - vendor blob uses miscdevices directly
+    # mknod /dev/video0 c 81 0
+    # mknod /dev/video1 c 81 1
+    # chmod 0660 /dev/video0 /dev/video1
+    # chown media camera /dev/video0 /dev/video1
+    # ln -s /dev/imx179 /dev/video0
+    # ln -s /dev/ov5693 /dev/video1
 
 #Copyright (c) 2011-2014 NVIDIA Corporation.  All Rights Reserved.
 #

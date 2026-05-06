@@ -1,7 +1,8 @@
-on early-fs
-    mknod /dev/video0 c 81 0
-    mknod /dev/video1 c 81 1
-    chmod 0660 /dev/video0
-    chmod 0660 /dev/video1
-    chown media camera /dev/video0
-    chown media camera /dev/video1
+# No need to create V4L2 nodes - vendor blob uses miscdevices directly
+# on early-fs
+#     mknod /dev/video0 c 81 0
+#     mknod /dev/video1 c 81 1
+#     chmod 0660 /dev/video0
+#     chmod 0660 /dev/video1
+#     chown media camera /dev/video0
+#     chown media camera /dev/video1

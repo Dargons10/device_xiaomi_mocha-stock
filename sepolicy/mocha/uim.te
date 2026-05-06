@@ -1,0 +1,21 @@
+type uim, domain;
+type uim_exec, exec_type, file_type;
+
+init_daemon_domain(uim)
+
+allow uim radio_device:chr_file rw_file_perms;
+
+r_dir_file(uim, sysfs)
+allow uim sysfs:file rw_file_perms;
+allow uim sysfs:dir r_dir_perms;
+
+allow uim device:dir r_dir_perms;
+
+allow uim self:unix_stream_socket create_stream_socket_perms;
+
+allow uim bluetooth_data_file:dir rw_dir_perms;
+allow uim bluetooth_data_file:file create_file_perms;
+
+allow uim kernel:system module_request;
+
+allow uim self:capability { sys_module net_admin net_raw };
