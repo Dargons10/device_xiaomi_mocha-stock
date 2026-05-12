@@ -25,12 +25,15 @@ struct PipelineConfig {
     uint32_t height;
     uint32_t pixelFormat;  // V4L2 format
     uint8_t bayerPattern;
+    uint8_t offset_x;
+    uint8_t offset_y;
     bool enableISP;
 };
 
 struct V4l2Buffer {
     void* start;
     size_t length;
+    bool allocated;
 };
 
 class CameraPipeline {

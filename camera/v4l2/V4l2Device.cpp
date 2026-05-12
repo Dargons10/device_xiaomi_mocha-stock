@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/poll.h>
 #include <errno.h>
 
 namespace mocha {
@@ -288,13 +289,13 @@ int V4l2Device::streamOn(enum v4l2_buf_type type) {
     if (mFd < 0 || mStreaming) return -EINVAL;
 
     if (ioctl(mFd, VIDIOC_STREAMON, &type) < 0) {
-        ALOGE("VIDIOC_STREAMON failed: %s", strerror(errno));
+        ALOGE("VIDIOC_STREAMON failed: %s (errno=%d)", strerror(errno), errno);
         return -errno;
     }
 
     mStreaming = true;
     mBufType = type;
-    ALOGI("Stream ON");
+    ALOGI("Stream ON (type=%d)", type);
     return 0;
 }
 
@@ -302,17 +303,51 @@ int V4l2Device::streamOff(enum v4l2_buf_type type) {
     if (mFd < 0 || !mStreaming) return 0;
 
     if (ioctl(mFd, VIDIOC_STREAMOFF, &type) < 0) {
-        ALOGE("VIDIOC_STREAMOFF failed: %s", strerror(errno));
+        ALOGE("VIDIOC_STREAMOFF failed: %s (errno=%d)", strerror(errno), errno);
         return -errno;
     }
 
     mStreaming = false;
-    ALOGI("Stream OFF");
+    ALOGI("Stream OFF (type=%d)", type);
     return 0;
 }
 
 int V4l2Device::dequeueBuffer(struct v4l2_buffer *buf) {
     if (mFd < 0) return -EINVAL;
+
+    // Wait for buffer using poll() with retries
+    struct pollfd pfd;
+    pfd.fd = mFd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+
+    int poll_timeout_ms = 500;
+    int max_retries = 3;
+    int retry_count = 0;
+
+    do {
+        pfd.revents = 0;
+        int pollRet = poll(&pfd, 1, poll_timeout_ms);
+        if (pollRet < 0) {
+            ALOGE("poll failed: %s", strerror(errno));
+            return -errno;
+        }
+        if (pollRet == 0) {
+            retry_count++;
+            if (retry_count >= max_retries) {
+                ALOGW("poll timeout after %d retries - no frame available", retry_count);
+                return -EAGAIN;
+            }
+            poll_timeout_ms = 250;
+            ALOGW("poll timeout, retry %d/%d", retry_count, max_retries);
+            continue;
+        }
+        if (!(pfd.revents & POLLIN)) {
+            ALOGW("poll returned unexpected event: 0x%x", pfd.revents);
+            return -EAGAIN;
+        }
+        break;
+    } while (retry_count < max_retries);
 
     memset(buf, 0, sizeof(struct v4l2_buffer));
     buf->type = mBufType;
@@ -321,7 +356,7 @@ int V4l2Device::dequeueBuffer(struct v4l2_buffer *buf) {
     int ret = ioctl(mFd, VIDIOC_DQBUF, buf);
     if (ret < 0) {
         if (errno == EAGAIN) {
-            return -EAGAIN;  // No buffer available
+            return -EAGAIN;
         }
         ALOGE("VIDIOC_DQBUF failed: %s", strerror(errno));
         return -errno;
@@ -336,8 +371,9 @@ int V4l2Device::queueBuffer(struct v4l2_buffer *buf) {
     buf->type = mBufType;
     buf->memory = mMemory;
 
+    ALOGV("queueBuffer: index=%d, memory=%d", buf->index, buf->memory);
     if (ioctl(mFd, VIDIOC_QBUF, buf) < 0) {
-        ALOGE("VIDIOC_QBUF failed: %s", strerror(errno));
+        ALOGE("VIDIOC_QBUF failed: %s (errno=%d)", strerror(errno), errno);
         return -errno;
     }
 

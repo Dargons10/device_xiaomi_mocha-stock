@@ -8,8 +8,11 @@
 
 #include <hardware/camera_common.h>
 #include <hardware/camera3.h>
+#include <memory>
 
 namespace mocha {
+
+class InFlightTracker;
 
 struct MochaCameraInfo {
     int cameraId;

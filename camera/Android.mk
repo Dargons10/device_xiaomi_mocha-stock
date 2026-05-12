@@ -25,7 +25,7 @@ LOCAL_C_INCLUDES := \
     hardware/libhardware/include \
     device/xiaomi/mocha/camera
 
-LOCAL_CFLAGS := -DLOG_TAG=\"MochaCameraHAL\"
+LOCAL_CFLAGS := -DLOG_TAG=\"MochaCameraHAL\" -std=c++11
 
 LOCAL_32_BIT_ONLY := true
 LOCAL_MODULE_RELATIVE_PATH := hw
