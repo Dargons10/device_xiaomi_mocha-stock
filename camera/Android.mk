@@ -6,6 +6,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
     MochaCameraHAL.cpp \
     CameraPipeline.cpp \
+    JpegEncoder.cpp \
     isp/DemosaicNEON.cpp \
     isp/ColorConvNEON.cpp
 
@@ -14,18 +15,19 @@ LOCAL_SHARED_LIBRARIES := \
     liblog \
     libutils \
     libcutils \
-    libcamera_metadata
+    libcamera_metadata \
+    libjpeg
 
 LOCAL_C_INCLUDES := \
-    frameworks/native/include \
-    frameworks/native/libs/nativebase/include \
-    frameworks/av/include \
     system/core/include \
     system/media/camera/include \
     hardware/libhardware/include \
-    device/xiaomi/mocha/camera
+    frameworks/native/include \
+    frameworks/av/include \
+    external/libjpeg-turbo
 
-LOCAL_CFLAGS := -DLOG_TAG=\"MochaCameraHAL\" -std=c++11
+LOCAL_ARM_NEON := true
+LOCAL_CFLAGS := -DLOG_TAG=\"MochaCameraHAL\" -std=c++11 -D__ARM_NEON__ -mfpu=neon -mfloat-abi=softfp
 
 LOCAL_32_BIT_ONLY := true
 LOCAL_MODULE_RELATIVE_PATH := hw

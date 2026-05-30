@@ -80,6 +80,9 @@ TARGET_ADDITIONAL_GRALLOC_10_USAGE_BITS := 0x2000U | 0x02000000U
 USE_OPENGL_RENDERER := true
 NUM_FRAMEBUFFER_SURFACE_BUFFERS := 2
 BOARD_DISABLE_TRIPLE_BUFFERED_DISPLAY_SURFACES := true
+# Tegra K1 gralloc/display no usa el sync framework de Android correctamente.
+# Mantener =true evita que SurfaceFlinger espere fences que nunca llegan.
+# Nuestro gralloc.mocha implementa lockAsync/unlockAsync pero ignora fences.
 TARGET_RUNNING_WITHOUT_SYNC_FRAMEWORK := true
 TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS := false
 SF_VSYNC_EVENT_PHASE_OFFSET_NS := 5000000
