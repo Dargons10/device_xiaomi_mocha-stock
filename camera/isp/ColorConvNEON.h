@@ -27,15 +27,6 @@ private:
     uint16_t mWidth;
     uint16_t mHeight;
     bool mInitialized;
-    
-    // BT.601 conversion matrix
-    static const int SCALE = 1 << 10;
-    static const int CR_R = 267;
-    static const int CR_G = 516;
-    static const int CR_B = 100;
-    static const int CB_R = 150;
-    static const int CB_G = 430;
-    static const int CB_B = 48;
 };
 
 } // namespace mocha

@@ -1,8 +1,6 @@
-/*
- * CameraPipeline Implementation
- */
-
 #include "CameraPipeline.h"
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <system/graphics.h>
 #include <cutils/log.h>
@@ -27,7 +25,19 @@ CameraPipeline::CameraPipeline()
       mRgbBufferSize(0),
       mStreaming(false),
       mBufferCount(0),
-      mCurrentBuffer(0) {
+      mCurrentBuffer(0),
+      mCurrentExposure(2500),
+      mCurrentGain(32),
+      mHasAwbInit(false) {
+    for (int i = 0; i < 4; i++) {
+        mBuffers[i].start = nullptr;
+        mBuffers[i].length = 0;
+        mBuffers[i].allocated = false;
+    }
+    mAwbGains[0] = 1.0f;
+    mAwbGains[1] = 1.0f;
+    mAwbGains[2] = 1.0f;
+    mAwbGains[3] = 1.0f;
 }
 
 CameraPipeline::~CameraPipeline() {
@@ -44,16 +54,13 @@ int CameraPipeline::open(int cameraId) {
 
     mCameraId = cameraId;
     const char* devPath = (cameraId == 0) ? "/dev/video0" : "/dev/video1";
-    
+
     mFd = ::open(devPath, O_RDWR | O_NONBLOCK);
     if (mFd < 0) {
         ALOGE("Failed to open V4L2 device: %s (error %d: %s)", devPath, errno, strerror(errno));
         return -ENODEV;
     }
 
-    ALOGI("Opened V4L2 device: %s (fd=%d)", devPath, mFd);
-    
-    // Verify capabilities
     struct v4l2_capability cap;
     memset(&cap, 0, sizeof(cap));
     if (ioctl(mFd, VIDIOC_QUERYCAP, &cap) < 0) {
@@ -62,28 +69,22 @@ int CameraPipeline::open(int cameraId) {
         mFd = -1;
         return -ENODEV;
     }
-    
-    ALOGI("V4L2 capabilities: driver=%s, card=%s, capabilities=0x%08X",
-          cap.driver, cap.card, cap.capabilities);
-    
-    if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-        ALOGE("Device does not support video capture");
+
+    if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) ||
+        !(cap.capabilities & V4L2_CAP_STREAMING)) {
+        ALOGE("Device does not support video capture or streaming");
         ::close(mFd);
         mFd = -1;
         return -ENODEV;
     }
 
     mState = PIPELINE_OPENED;
-    ALOGI("CameraPipeline opened successfully");
     return 0;
 }
 
 int CameraPipeline::close() {
-    ALOGI("CameraPipeline::close");
-
     stopStreaming();
 
-    // Free USERPTR buffers
     for (int i = 0; i < mBufferCount; i++) {
         if (mBuffers[i].start && mBuffers[i].allocated) {
             free(mBuffers[i].start);
@@ -108,23 +109,69 @@ int CameraPipeline::close() {
     return 0;
 }
 
-int CameraPipeline::configure(const PipelineConfig& config) {
-    ALOGI("CameraPipeline::configure %dx%d format=%d",
-          config.width, config.height, config.pixelFormat);
+int CameraPipeline::setExposure(int exposure) {
+    struct v4l2_control ctrl;
+    memset(&ctrl, 0, sizeof(ctrl));
+    ctrl.id = V4L2_CID_EXPOSURE;
+    ctrl.value = exposure;
+    int ret = ioctl(mFd, VIDIOC_S_CTRL, &ctrl);
+    if (ret == 0) {
+        mCurrentExposure = exposure;
+    } else {
+        ALOGE("setExposure(%d) failed: ret=%d errno=%d (%s)",
+              exposure, ret, errno, strerror(errno));
+    }
+    return ret;
+}
 
+int CameraPipeline::setGain(int gain) {
+    struct v4l2_control ctrl;
+    memset(&ctrl, 0, sizeof(ctrl));
+    ctrl.id = V4L2_CID_GAIN;
+    ctrl.value = gain;
+    int ret = ioctl(mFd, VIDIOC_S_CTRL, &ctrl);
+    if (ret == 0) {
+        mCurrentGain = gain;
+    } else {
+        ALOGE("setGain(%d) failed: ret=%d errno=%d (%s)",
+              gain, ret, errno, strerror(errno));
+    }
+    return ret;
+}
+
+int CameraPipeline::getExposure() {
+    struct v4l2_control ctrl;
+    memset(&ctrl, 0, sizeof(ctrl));
+    ctrl.id = V4L2_CID_EXPOSURE;
+    if (ioctl(mFd, VIDIOC_G_CTRL, &ctrl) == 0) {
+        mCurrentExposure = ctrl.value;
+        return ctrl.value;
+    }
+    return mCurrentExposure;
+}
+
+int CameraPipeline::getGain() {
+    struct v4l2_control ctrl;
+    memset(&ctrl, 0, sizeof(ctrl));
+    ctrl.id = V4L2_CID_GAIN;
+    if (ioctl(mFd, VIDIOC_G_CTRL, &ctrl) == 0) {
+        mCurrentGain = ctrl.value;
+        return ctrl.value;
+    }
+    return mCurrentGain;
+}
+
+int CameraPipeline::configure(const PipelineConfig& config) {
     if (mState == PIPELINE_STREAMING) {
-        ALOGE("Cannot configure while streaming");
         return -EBUSY;
     }
 
     mConfig = config;
 
     if (mFd < 0) {
-        ALOGE("V4L2 device not initialized");
         return -ENODEV;
     }
 
-    // Set format
     struct v4l2_format fmt;
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -132,21 +179,18 @@ int CameraPipeline::configure(const PipelineConfig& config) {
     fmt.fmt.pix.height = config.height;
     fmt.fmt.pix.pixelformat = config.pixelFormat;
     fmt.fmt.pix.field = V4L2_FIELD_NONE;
-    
+
+    ALOGI("VIDIOC_S_FMT: requesting %dx%d fmt=0x%x", config.width, config.height, config.pixelFormat);
+
     if (ioctl(mFd, VIDIOC_S_FMT, &fmt) < 0) {
         ALOGE("VIDIOC_S_FMT failed: %s", strerror(errno));
         return -errno;
     }
-    
-    ALOGI("Set format: %dx%d, pixelformat=%c%c%c%c, bytesperline=%d, sizeimage=%d",
-          fmt.fmt.pix.width, fmt.fmt.pix.height,
-          (fmt.fmt.pix.pixelformat >> 0) & 0xFF,
-          (fmt.fmt.pix.pixelformat >> 8) & 0xFF,
-          (fmt.fmt.pix.pixelformat >> 16) & 0xFF,
-          (fmt.fmt.pix.pixelformat >> 24) & 0xFF,
-          fmt.fmt.pix.bytesperline, fmt.fmt.pix.sizeimage);
 
-    // Request buffers (USERPTR) - use 2 to match framework max_buffers
+    ALOGI("VIDIOC_S_FMT: got %dx%d fmt=0x%x sizeimage=%d",
+          fmt.fmt.pix.width, fmt.fmt.pix.height,
+          fmt.fmt.pix.pixelformat, fmt.fmt.pix.sizeimage);
+
     struct v4l2_requestbuffers req;
     memset(&req, 0, sizeof(req));
     req.count = 2;
@@ -158,79 +202,68 @@ int CameraPipeline::configure(const PipelineConfig& config) {
         return -errno;
     }
 
-    ALOGI("Requested %d buffers (USERPTR), got %d", 2, req.count);
-    
     if (req.count < 2) {
-        ALOGE("Not enough buffers: %d", req.count);
         return -ENOMEM;
     }
-    
+
     mBufferCount = req.count;
-    
-    // Allocate USERPTR buffers in userspace
+
     uint32_t bufSize = fmt.fmt.pix.sizeimage;
     for (int i = 0; i < mBufferCount; i++) {
         mBuffers[i].length = bufSize;
-        mBuffers[i].start = malloc(bufSize);
+        void* ptr = nullptr;
+        if (posix_memalign(&ptr, 4096, bufSize) != 0) ptr = nullptr;
+        mBuffers[i].start = ptr;
         if (!mBuffers[i].start) {
-            ALOGE("Failed to allocate USERPTR buffer %d (%u bytes)", i, bufSize);
-            mBuffers[i].start = nullptr;
-            mBuffers[i].allocated = false;
+            for (int j = 0; j < i; j++) {
+                free(mBuffers[j].start);
+                mBuffers[j].start = nullptr;
+                mBuffers[j].allocated = false;
+            }
+            mBufferCount = 0;
             return -ENOMEM;
         }
         mBuffers[i].allocated = true;
         memset(mBuffers[i].start, 0, bufSize);
-        
-        ALOGI("Allocated USERPTR buffer %d: %p, %zu bytes", i, mBuffers[i].start, mBuffers[i].length);
     }
 
-    // Initialize ISP if enabled
     if (config.enableISP) {
-        ALOGI("Initializing ISP pipeline (width=%d, height=%d, bayerPattern=%d, offset_x=%d, offset_y=%d)",
-              config.width, config.height, config.bayerPattern, config.offset_x, config.offset_y);
-
         DemosaicParams demosaicParams;
         demosaicParams.width = config.width;
         demosaicParams.height = config.height;
         demosaicParams.bayerPattern = config.bayerPattern;
         demosaicParams.offset_x = config.offset_x;
         demosaicParams.offset_y = config.offset_y;
-        demosaicParams.blackLevel = 0;
+        demosaicParams.blackLevel = config.blackLevel;
 
         mDemosaic = std::unique_ptr<DemosaicNEON>(new DemosaicNEON());
         int ret = mDemosaic->initialize(demosaicParams);
-        if (ret != 0) {
-            ALOGE("Failed to initialize demosaic: %d", ret);
-            return ret;
-        }
-        ALOGI("Demosaic initialized successfully");
+        if (ret != 0) return ret;
 
         mColorConv = std::unique_ptr<ColorConvNEON>(new ColorConvNEON());
         ret = mColorConv->initialize(config.width, config.height);
-        if (ret != 0) {
-            ALOGE("Failed to initialize color conversion: %d", ret);
-            return ret;
-        }
-        ALOGI("ColorConv initialized successfully");
+        if (ret != 0) return ret;
 
+        if (mRgbBuffer) {
+            delete[] mRgbBuffer;
+            mRgbBuffer = nullptr;
+        }
         mRgbBufferSize = config.width * config.height * 3;
         mRgbBuffer = new uint8_t[mRgbBufferSize];
-        ALOGI("RGB buffer allocated: %d bytes", mRgbBufferSize);
     }
 
-    ALOGI("Pipeline configured successfully");
+    /* Always set initial exposure/gain via V4L2 controls */
+    setExposure(mCurrentExposure);
+    setGain(mCurrentGain);
+    ALOGI("Initial exposure=%d gain=%d", mCurrentExposure, mCurrentGain);
+    mHasAwbInit = false;
+
     return 0;
 }
 
 int CameraPipeline::startStreaming() {
-    ALOGI("CameraPipeline::startStreaming");
+    if (mState != PIPELINE_OPENED) return -EINVAL;
 
-    if (mState != PIPELINE_OPENED) {
-        ALOGE("Pipeline not opened");
-        return -EINVAL;
-    }
-
-    // Queue all buffers with USERPTR
     for (int i = 0; i < mBufferCount; i++) {
         struct v4l2_buffer buf;
         memset(&buf, 0, sizeof(buf));
@@ -239,60 +272,138 @@ int CameraPipeline::startStreaming() {
         buf.index = i;
         buf.m.userptr = (unsigned long)mBuffers[i].start;
         buf.length = mBuffers[i].length;
-        
-        if (ioctl(mFd, VIDIOC_QBUF, &buf) < 0) {
-            ALOGE("VIDIOC_QBUF failed for buffer %d: %s (errno=%d)", i, strerror(errno), errno);
-            return -errno;
-        }
-        ALOGI("Queued buffer %d (userptr=%p, length=%zu)", i, mBuffers[i].start, mBuffers[i].length);
-    }
-    
-    ALOGI("Queued %d buffers (USERPTR)", mBufferCount);
 
-    // Start streaming
-    enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (ioctl(mFd, VIDIOC_STREAMON, &type) < 0) {
-        ALOGE("VIDIOC_STREAMON failed: %s (errno=%d)", strerror(errno), errno);
-        return -errno;
+        if (ioctl(mFd, VIDIOC_QBUF, &buf) < 0) return -errno;
     }
+
+    enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if (ioctl(mFd, VIDIOC_STREAMON, &type) < 0) return -errno;
 
     mStreaming = true;
     mState = PIPELINE_STREAMING;
-    ALOGI("Pipeline streaming started");
     return 0;
 }
 
 int CameraPipeline::stopStreaming() {
-    ALOGI("CameraPipeline::stopStreaming");
-
-    if (!mStreaming) {
-        ALOGI("Already stopped");
-        return 0;
-    }
+    if (!mStreaming) return 0;
 
     enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    if (ioctl(mFd, VIDIOC_STREAMOFF, &type) < 0) {
-        ALOGE("VIDIOC_STREAMOFF failed: %s (errno=%d)", strerror(errno), errno);
-    } else {
-        ALOGI("Stream OFF successful");
-    }
+    ioctl(mFd, VIDIOC_STREAMOFF, &type);
 
     mStreaming = false;
     mState = PIPELINE_OPENED;
     return 0;
 }
 
+void CameraPipeline::doAutoExposure(const uint8_t* rgbBuffer) {
+    if (!rgbBuffer || !mConfig.enableAE) return;
+
+    int total = mConfig.width * mConfig.height;
+    uint64_t sum = 0;
+    for (int i = 0; i < total; i++) {
+        int off = i * 3;
+        uint8_t r = rgbBuffer[off], g = rgbBuffer[off+1], b = rgbBuffer[off+2];
+        uint8_t y = (uint8_t)((r * 77 + g * 150 + b * 29) >> 8);
+        sum += y;
+    }
+    float avgLuma = (float)sum / total / 255.0f;
+    float target = mConfig.targetLuma;
+
+    if (avgLuma < 0.01f) return;
+
+    float ratio = target / avgLuma;
+    ratio = (ratio < 0.5f) ? 0.5f : (ratio > 4.0f) ? 4.0f : ratio;
+
+    int newExp = (int)(mCurrentExposure * ratio);
+    int newGain = mCurrentGain;
+
+    if (newExp > 2450) {
+        newGain = (int)(mCurrentGain * (newExp / 2450.0f));
+        newExp = 2450;
+    }
+    if (newExp < 10) {
+        newExp = 10;
+    }
+    if (newGain > 240) newGain = 240;
+    if (newGain < 1) newGain = 1;
+
+    if (newExp != mCurrentExposure || newGain != mCurrentGain) {
+        if (newGain != mCurrentGain) setGain(newGain);
+        if (newExp != mCurrentExposure) setExposure(newExp);
+        ALOGI("AE: luma=%.2f target=%.2f exp=%d(%d) gain=%d(%d)",
+              avgLuma, target, newExp, mCurrentExposure, newGain, mCurrentGain);
+    }
+}
+
+void CameraPipeline::doAutoWhiteBalance(const uint8_t* rgbBuffer) {
+    if (!rgbBuffer || !mConfig.enableAWB) return;
+
+    int total = mConfig.width * mConfig.height;
+    uint64_t sumR = 0, sumG = 0, sumB = 0;
+    int pixelCount = 0;
+
+    for (int i = 0; i < total; i += 4) {
+        int off = i * 3;
+        sumR += rgbBuffer[off];
+        sumG += rgbBuffer[off+1];
+        sumB += rgbBuffer[off+2];
+        pixelCount++;
+    }
+
+    if (pixelCount < 100) return;
+    float avgR = (float)sumR / pixelCount;
+    float avgG = (float)sumG / pixelCount;
+    float avgB = (float)sumB / pixelCount;
+
+    if (avgR < 5.0f || avgG < 5.0f || avgB < 5.0f) return;
+
+    float rGain = avgG / avgR;
+    float bGain = avgG / avgB;
+
+    rGain = (rGain < 0.5f) ? 0.5f : (rGain > 3.0f) ? 3.0f : rGain;
+    bGain = (bGain < 0.5f) ? 0.5f : (bGain > 3.0f) ? 3.0f : bGain;
+
+    float alpha = 0.3f;
+    if (!mHasAwbInit) {
+        mAwbGains[0] = rGain;
+        mAwbGains[2] = bGain;
+        mHasAwbInit = true;
+    } else {
+        mAwbGains[0] = mAwbGains[0] * (1.0f - alpha) + rGain * alpha;
+        mAwbGains[2] = mAwbGains[2] * (1.0f - alpha) + bGain * alpha;
+    }
+    mAwbGains[1] = 1.0f;
+    mAwbGains[3] = 1.0f;
+
+    ALOGI("AWB: R/G=%.2f B/G=%.2f gains R=%.2f B=%.2f", avgR/avgG, avgB/avgG, mAwbGains[0], mAwbGains[2]);
+}
+
+static void applyGamma(uint8_t* rgb, int width, int height, float gamma) {
+    uint8_t lut[256];
+    for (int i = 0; i < 256; i++)
+        lut[i] = (uint8_t)(powf(i / 255.0f, gamma) * 255.0f + 0.5f);
+    int total = width * height;
+    for (int i = 0; i < total * 3; i++)
+        rgb[i] = lut[rgb[i]];
+}
+
+static void flipVertical(uint8_t* buf, int width, int height, int bpp) {
+    int rowSize = width * bpp;
+    uint8_t* tmp = new uint8_t[rowSize];
+    for (int y = 0; y < height / 2; y++) {
+        int topOff = y * rowSize;
+        int botOff = (height - 1 - y) * rowSize;
+        memcpy(tmp, buf + topOff, rowSize);
+        memcpy(buf + topOff, buf + botOff, rowSize);
+        memcpy(buf + botOff, tmp, rowSize);
+    }
+    delete[] tmp;
+}
+
 int CameraPipeline::captureFrame(uint8_t* outputBuffer, uint32_t outputFormat) {
-    if (mState != PIPELINE_STREAMING) {
-        ALOGE("Pipeline not streaming");
-        return -EINVAL;
-    }
+    if (mState != PIPELINE_STREAMING) return -EINVAL;
+    if (!outputBuffer) return -EINVAL;
 
-    if (!outputBuffer) {
-        return -EINVAL;
-    }
-
-    // Wait for buffer using poll() with retries and progressive timeouts
     struct pollfd pfd;
     pfd.fd = mFd;
     pfd.events = POLLIN;
@@ -306,27 +417,16 @@ int CameraPipeline::captureFrame(uint8_t* outputBuffer, uint32_t outputFormat) {
     do {
         pfd.revents = 0;
         pollRet = poll(&pfd, 1, poll_timeout_ms);
-        if (pollRet < 0) {
-            ALOGE("poll failed: %s", strerror(errno));
-            return -errno;
-        }
+        if (pollRet < 0) return -errno;
         if (pollRet == 0) {
             retry_count++;
-            if (retry_count >= max_retries) {
-                ALOGW("poll timeout after %d retries (%dms each) - sensor may need restart", retry_count, poll_timeout_ms);
-                return -EAGAIN;
-            }
-            ALOGW("poll timeout, retry %d/%d", retry_count, max_retries);
+            if (retry_count >= max_retries) return -EAGAIN;
             continue;
         }
-        if (!(pfd.revents & POLLIN)) {
-            ALOGW("poll returned unexpected event: 0x%x", pfd.revents);
-            return -EAGAIN;
-        }
+        if (!(pfd.revents & POLLIN)) return -EAGAIN;
         break;
     } while (retry_count < max_retries);
 
-    // Dequeue a buffer
     struct v4l2_buffer buf;
     memset(&buf, 0, sizeof(buf));
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -334,69 +434,84 @@ int CameraPipeline::captureFrame(uint8_t* outputBuffer, uint32_t outputFormat) {
 
     int ret = ioctl(mFd, VIDIOC_DQBUF, &buf);
     if (ret < 0) {
-        if (errno == EAGAIN) {
-            return -EAGAIN;
-        }
-        ALOGE("VIDIOC_DQBUF failed: %s", strerror(errno));
+        if (errno == EAGAIN) return -EAGAIN;
         return -errno;
     }
-    
-    if (buf.index >= mBufferCount) {
-        ALOGE("Invalid buffer index: %d", buf.index);
-        return -EINVAL;
-    }
+
+    if (buf.index >= mBufferCount) return -EINVAL;
 
     uint8_t* frameBuffer = (uint8_t*)mBuffers[buf.index].start;
     uint32_t frameSize = buf.bytesused;
-    
-    ALOGI("Dequeued buffer %d, bytesused=%d, enableISP=%d", buf.index, frameSize, mConfig.enableISP ? 1 : 0);
 
     if (mConfig.enableISP && mDemosaic && mColorConv) {
-        ALOGI("Processing Bayer through ISP pipeline");
         ret = processBayerToYuv(frameBuffer, outputBuffer, outputFormat);
-        if (ret == 0) {
-            ALOGI("ISP processing completed successfully");
-        } else {
-            ALOGE("ISP processing failed with error %d", ret);
-        }
     } else {
-        ALOGW("ISP not available, copying raw data (enableISP=%d, mDemosaic=%p, mColorConv=%p)",
-              mConfig.enableISP ? 1 : 0, mDemosaic.get(), mColorConv.get());
         memcpy(outputBuffer, frameBuffer, frameSize);
         ret = 0;
     }
 
-    // Re-queue the buffer immediately
+    /* DEBUG: dump output buffer pixels (first 4 pixels center row) */
+    if (outputFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
+        int mid_y = mConfig.height / 2;
+        int mid_x = mConfig.width / 2;
+        int off = (mid_y * mConfig.width + mid_x) * 4;
+        ALOGD("OUTbuf[%d,%d] RGBA=%02x %02x %02x %02x | [%d,%d] RGBA=%02x %02x %02x %02x",
+              mid_x, mid_y,
+              outputBuffer[off], outputBuffer[off+1], outputBuffer[off+2], outputBuffer[off+3],
+              mid_x+1, mid_y,
+              outputBuffer[off+4], outputBuffer[off+5], outputBuffer[off+6], outputBuffer[off+7]);
+    }
+
     buf.m.userptr = (unsigned long)mBuffers[buf.index].start;
     buf.length = mBuffers[buf.index].length;
-    if (ioctl(mFd, VIDIOC_QBUF, &buf) < 0) {
-        ALOGE("VIDIOC_QBUF failed after capture: %s (errno=%d)", strerror(errno), errno);
-        return -errno;
-    }
+    if (ioctl(mFd, VIDIOC_QBUF, &buf) < 0) return -errno;
 
     return ret;
 }
 
 int CameraPipeline::processBayerToYuv(const uint8_t* bayerData, uint8_t* output, uint32_t outputFormat) {
-    if (!bayerData || !output || !mDemosaic || !mColorConv) {
-        ALOGE("processBayerToYuv: null parameters (bayer=%p, output=%p, demosaic=%p, colorconv=%p)",
-              bayerData, output, mDemosaic.get(), mColorConv.get());
-        return -EINVAL;
-    }
+    if (!bayerData || !output || !mDemosaic || !mColorConv) return -EINVAL;
 
-    ALOGI("Running demosaic on %dx%d image", mConfig.width, mConfig.height);
     mDemosaic->process(bayerData, mRgbBuffer);
 
+    /* AWB update before applying gains */
+    if (mConfig.enableAWB)
+        doAutoWhiteBalance(mRgbBuffer);
+
+    /* White Balance gains (from AWB if enabled, else from config) */
+    {
+        int total = mConfig.width * mConfig.height;
+        float rG = mConfig.enableAWB ? mAwbGains[0] : mConfig.wbGain[0];
+        float gG = mConfig.enableAWB ? mAwbGains[1] : mConfig.wbGain[1];
+        float bG = mConfig.enableAWB ? mAwbGains[2] : mConfig.wbGain[2];
+        if (rG != 1.0f || gG != 1.0f || bG != 1.0f) {
+            for (int i = 0; i < total; i++) {
+                int off = i * 3;
+                int r = (int)(mRgbBuffer[off]   * rG);
+                int g = (int)(mRgbBuffer[off+1] * gG);
+                int b = (int)(mRgbBuffer[off+2] * bG);
+                mRgbBuffer[off]   = r > 255 ? 255 : (uint8_t)r;
+                mRgbBuffer[off+1] = g > 255 ? 255 : (uint8_t)g;
+                mRgbBuffer[off+2] = b > 255 ? 255 : (uint8_t)b;
+            }
+        }
+    }
+
+    applyGamma(mRgbBuffer, mConfig.width, mConfig.height, mConfig.gamma);
+
     if (outputFormat == HAL_PIXEL_FORMAT_YCBCR_420_888) {
-        ALOGI("Converting RGB to NV12");
         uint8_t* yPlane = output;
         uint8_t* uvPlane = output + mConfig.width * mConfig.height;
         mColorConv->rgbToNv12(mRgbBuffer, yPlane, uvPlane);
     } else if (outputFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
-        ALOGI("Converting RGB to RGBA8888");
         mColorConv->rgbToRgba(mRgbBuffer, output, mConfig.width, mConfig.height);
+        if (mConfig.flipV) flipVertical(output, mConfig.width, mConfig.height, 4);
+        /* DEBUG: check 2 pixels from center of RGBA output */
+        int mid = (mConfig.height/2)*mConfig.width + mConfig.width/2;
+        ALOGD("RGBAout[center]=%02x%02x%02x%02x [center+1]=%02x%02x%02x%02x",
+              output[mid*4], output[mid*4+1], output[mid*4+2], output[mid*4+3],
+              output[(mid+1)*4], output[(mid+1)*4+1], output[(mid+1)*4+2], output[(mid+1)*4+3]);
     } else {
-        ALOGW("Unknown output format %d, copying RGB data", outputFormat);
         memcpy(output, mRgbBuffer, mRgbBufferSize);
     }
 

@@ -1,15 +1,12 @@
-/*
- * DemosaicNEON Implementation
- * Bayer to RGB using optimized C (compiler auto-vectorizes with NEON)
- */
-
-#include "isp/DemosaicNEON.h"
+#include "DemosaicNEON.h"
 #include <cstring>
 #include <cstdlib>
+#include <cmath>
+#include <arm_neon.h>
+#include <cutils/log.h>
 
 namespace mocha {
 
-// Bayer pattern definitions
 #define BAYER_GBRG 0
 #define BAYER_GRBG 1
 #define BAYER_BGGR 2
@@ -22,110 +19,177 @@ DemosaicNEON::DemosaicNEON()
     mParams.offset_y = 0;
 }
 
-DemosaicNEON::~DemosaicNEON() {
-}
+DemosaicNEON::~DemosaicNEON() {}
 
 int DemosaicNEON::initialize(const DemosaicParams& params) {
-    if (params.width == 0 || params.height == 0) {
-        return -1;
-    }
-
+    if (params.width == 0 || params.height == 0) return -1;
     mParams = params;
     mInitialized = true;
     return 0;
 }
 
 void DemosaicNEON::process(const uint8_t* bayerInput, uint8_t* rgbOutput) {
-    if (!mInitialized || !bayerInput || !rgbOutput) {
-        return;
+    if (!mInitialized || !bayerInput || !rgbOutput) return;
+
+    const int w = mParams.width;
+    const int h = mParams.height;
+    const int ox = mParams.offset_x;
+    const int oy = mParams.offset_y;
+    const int pat = mParams.bayerPattern;
+
+    uint8_t* bayer8 = (uint8_t*)malloc(w * h);
+    if (!bayer8) return;
+
+    /* Convert 16-bit RAW10 to 8-bit with black level subtraction */
+    int total = w * h;
+    int i = 0;
+    for (; i + 16 <= total; i += 16) {
+        uint16_t tmp[16];
+        memcpy(tmp, bayerInput + i * 2, 32);
+        uint16x8_t v16a = vld1q_u16(tmp);
+        uint16x8_t v16b = vld1q_u16(tmp + 8);
+        uint8x16_t v8 = vcombine_u8(vshrn_n_u16(v16a, 2), vshrn_n_u16(v16b, 2));
+        uint8x16_t bl = vdupq_n_u8(mParams.blackLevel);
+        v8 = vqsubq_u8(v8, bl);
+        vst1q_u8(bayer8 + i, v8);
+    }
+    for (; i < total; i++) {
+        uint16_t val;
+        memcpy(&val, bayerInput + i * 2, 2);
+        int pixel = (val >> 2) - mParams.blackLevel;
+        bayer8[i] = pixel > 0 ? (uint8_t)pixel : 0;
     }
 
-    const int width = mParams.width;
-    const int height = mParams.height;
-    const uint16_t* bayer = (const uint16_t*)bayerInput;
+    /* Build position map for this Bayer pattern */
+    int pos_map[4];
+    if (pat == BAYER_RGGB) {
+        pos_map[0]=0; pos_map[1]=1; pos_map[2]=2; pos_map[3]=3;
+    } else if (pat == BAYER_GRBG) {
+        pos_map[0]=1; pos_map[1]=0; pos_map[2]=3; pos_map[3]=2;
+    } else if (pat == BAYER_GBRG) {
+        pos_map[0]=2; pos_map[1]=0; pos_map[2]=3; pos_map[3]=1;
+    } else {
+        pos_map[0]=3; pos_map[1]=1; pos_map[2]=2; pos_map[3]=0;
+    }
 
-    // Simple bilinear demosaicing for interior pixels
-    for (int y = 1; y < height - 1; y++) {
-        for (int x = 1; x < width - 1; x++) {
-            int idx = y * width + x;
-            
-            uint8_t r, g, b;
-            
-            // Determine position in Bayer pattern
-            int patternX = (x + mParams.offset_x) & 1;
-            int patternY = (y + mParams.offset_y) & 1;
-            
-            if (patternY == 0) {  // Green row
-                if (patternX == 0) {  // G channel at this position
-                    g = (bayer[idx] >> 2) & 0xFF;
-                    r = ((bayer[idx-1] + bayer[idx+1]) >> 2) & 0xFF;
-                    b = ((bayer[idx-width] + bayer[idx+width]) >> 2) & 0xFF;
-                } else {  // R or B at this position
-                    g = ((bayer[idx-1] + bayer[idx+1] + 
-                          bayer[idx-width] + bayer[idx+width]) >> 2) & 0xFF;
-                    r = (bayer[idx] >> 2) & 0xFF;
-                    b = ((bayer[idx-1-width] + bayer[idx-1+width] + 
-                          bayer[idx+1-width] + bayer[idx+1+width]) >> 2) & 0xFF;
-                }
-            } else {  // Red/Blue row
-                if (patternX == 0) {  // B
-                    b = (bayer[idx] >> 2) & 0xFF;
-                    g = ((bayer[idx-1] + bayer[idx+1] + 
-                          bayer[idx-width] + bayer[idx+width]) >> 2) & 0xFF;
-                    r = ((bayer[idx-1-width] + bayer[idx-1+width] + 
-                          bayer[idx+1-width] + bayer[idx+1+width]) >> 2) & 0xFF;
-                } else {  // R
-                    r = (bayer[idx] >> 2) & 0xFF;
-                    g = ((bayer[idx-1] + bayer[idx+1] + 
-                          bayer[idx-width] + bayer[idx+width]) >> 2) & 0xFF;
-                    b = ((bayer[idx-1-width] + bayer[idx-1+width] + 
-                          bayer[idx+1-width] + bayer[idx+1+width]) >> 2) & 0xFF;
-                }
+    /* DEBUG: compute average R, G, B from center region of raw bayer data */
+    {
+        int sumR=0, sumG=0, sumB=0, cntR=0, cntG=0, cntB=0;
+        int sy = h/3, ey = 2*h/3, sx = w/3, ex = 2*w/3;
+        for (int y = sy; y < ey; y++) {
+            for (int x = sx; x < ex; x++) {
+                int idx = y*w + x, pos = (((y+oy)&1)*2 + ((x+ox)&1));
+                uint8_t val = bayer8[idx];
+                if      (pos == pos_map[0]) { sumR += val; cntR++; }
+                else if (pos == pos_map[1]) { sumG += val; cntG++; }
+                else if (pos == pos_map[2]) { sumG += val; cntG++; }
+                else                        { sumB += val; cntB++; }
             }
-
-            int outIdx = (y * width + x) * 3;
-            rgbOutput[outIdx + 0] = r;
-            rgbOutput[outIdx + 1] = g;
-            rgbOutput[outIdx + 2] = b;
+        }
+        ALOGD("RAWavg[R,G,B]=[%d,%d,%d] pat=%d ox=%d oy=%d bl=%d",
+              cntR?sumR/cntR:0, cntG?sumG/cntG:0, cntB?sumB/cntB:0,
+              pat, ox, oy, mParams.blackLevel);
+        /* Dump raw 16-bit values for first 4 pixels to check byte ordering */
+        {
+            uint16_t rawpix[4];
+            memcpy(rawpix, bayerInput, 8);
+            ALOGD("RAW16[0..3]=[0x%04x,0x%04x,0x%04x,0x%04x]",
+                  rawpix[0], rawpix[1], rawpix[2], rawpix[3]);
         }
     }
 
-    // Fill edges with nearest valid pixel values
-    // Top row (y=0) - copy from y=1
-    for (int x = 0; x < width; x++) {
-        int srcIdx = (1 * width + x) * 3;
-        int dstIdx = (0 * width + x) * 3;
-        rgbOutput[dstIdx + 0] = rgbOutput[srcIdx + 0];
-        rgbOutput[dstIdx + 1] = rgbOutput[srcIdx + 1];
-        rgbOutput[dstIdx + 2] = rgbOutput[srcIdx + 2];
+    /* Simple bilinear demosaic for interior pixels (y=1..h-2, x=1..w-2) */
+    for (int y = 1; y < h - 1; y++) {
+        for (int x = 1; x < w - 1; x++) {
+            int idx = y * w + x;
+            int out = idx * 3;
+
+            /* Determine position in 2x2 Bayer block */
+            int pos = (((y + oy) & 1) * 2 + ((x + ox) & 1));
+
+            int rv, gv, bv;
+
+            if (pos == pos_map[0]) {
+                /* R position: raw R, interpolate G and B */
+                rv = bayer8[idx];
+                gv = ((int)bayer8[idx-1] + (int)bayer8[idx+1] +
+                      (int)bayer8[idx-w] + (int)bayer8[idx+w]) >> 2;
+                bv = ((int)bayer8[idx-w-1] + (int)bayer8[idx-w+1] +
+                      (int)bayer8[idx+w-1] + (int)bayer8[idx+w+1]) >> 2;
+            } else if (pos == pos_map[3]) {
+                /* B position: raw B, interpolate R and G */
+                bv = bayer8[idx];
+                gv = ((int)bayer8[idx-1] + (int)bayer8[idx+1] +
+                      (int)bayer8[idx-w] + (int)bayer8[idx+w]) >> 2;
+                rv = ((int)bayer8[idx-w-1] + (int)bayer8[idx-w+1] +
+                      (int)bayer8[idx+w-1] + (int)bayer8[idx+w+1]) >> 2;
+            } else if (pos == pos_map[1]) {
+                /* G1 position (same row as R): raw G, R from horizontal, B from vertical */
+                gv = bayer8[idx];
+                rv = ((int)bayer8[idx-1] + (int)bayer8[idx+1]) >> 1;
+                bv = ((int)bayer8[idx-w] + (int)bayer8[idx+w]) >> 1;
+            } else {
+                /* G2 position (same row as B): raw G, R from vertical, B from horizontal */
+                gv = bayer8[idx];
+                rv = ((int)bayer8[idx-w] + (int)bayer8[idx+w]) >> 1;
+                bv = ((int)bayer8[idx-1] + (int)bayer8[idx+1]) >> 1;
+            }
+
+            rv = rv < 0 ? 0 : (rv > 255 ? 255 : rv);
+            gv = gv < 0 ? 0 : (gv > 255 ? 255 : gv);
+            bv = bv < 0 ? 0 : (bv > 255 ? 255 : bv);
+            rgbOutput[out]   = (uint8_t)rv;
+            rgbOutput[out+1] = (uint8_t)gv;
+            rgbOutput[out+2] = (uint8_t)bv;
+        }
     }
 
-    // Bottom row (y=height-1) - copy from y=height-2
-    for (int x = 0; x < width; x++) {
-        int srcIdx = ((height - 2) * width + x) * 3;
-        int dstIdx = ((height - 1) * width + x) * 3;
-        rgbOutput[dstIdx + 0] = rgbOutput[srcIdx + 0];
-        rgbOutput[dstIdx + 1] = rgbOutput[srcIdx + 1];
-        rgbOutput[dstIdx + 2] = rgbOutput[srcIdx + 2];
+    /* DEBUG: average RGB of demosaiced center region */
+    {
+        int sR=0,sG=0,sB=0,cR=0,cG=0,cB=0;
+        int sy=h/3, ey=2*h/3, sx=w/3, ex=2*w/3;
+        for (int y = sy; y < ey; y++)
+            for (int x = sx; x < ex; x++) {
+                int out = (y*w + x)*3;
+                sR += rgbOutput[out];   cR++;
+                sG += rgbOutput[out+1]; cG++;
+                sB += rgbOutput[out+2]; cB++;
+            }
+        ALOGD("RGBout avg[R,G,B]=[%d,%d,%d]",
+              cR?sR/cR:0, cG?sG/cG:0, cB?sB/cB:0);
     }
 
-    // Left column (x=0) - copy from x=1
-    for (int y = 0; y < height; y++) {
-        int srcIdx = (y * width + 1) * 3;
-        int dstIdx = (y * width + 0) * 3;
-        rgbOutput[dstIdx + 0] = rgbOutput[srcIdx + 0];
-        rgbOutput[dstIdx + 1] = rgbOutput[srcIdx + 1];
-        rgbOutput[dstIdx + 2] = rgbOutput[srcIdx + 2];
+    /* Fill edges by copying nearest valid pixel */
+    for (int x = 0; x < w; x++) {
+        int src = (1 * w + x) * 3;
+        int dst = (0 * w + x) * 3;
+        rgbOutput[dst]   = rgbOutput[src];
+        rgbOutput[dst+1] = rgbOutput[src+1];
+        rgbOutput[dst+2] = rgbOutput[src+2];
+    }
+    for (int x = 0; x < w; x++) {
+        int src = ((h - 2) * w + x) * 3;
+        int dst = ((h - 1) * w + x) * 3;
+        rgbOutput[dst]   = rgbOutput[src];
+        rgbOutput[dst+1] = rgbOutput[src+1];
+        rgbOutput[dst+2] = rgbOutput[src+2];
+    }
+    for (int y = 0; y < h; y++) {
+        int src = (y * w + 1) * 3;
+        int dst = (y * w + 0) * 3;
+        rgbOutput[dst]   = rgbOutput[src];
+        rgbOutput[dst+1] = rgbOutput[src+1];
+        rgbOutput[dst+2] = rgbOutput[src+2];
+    }
+    for (int y = 0; y < h; y++) {
+        int src = (y * w + (w - 2)) * 3;
+        int dst = (y * w + (w - 1)) * 3;
+        rgbOutput[dst]   = rgbOutput[src];
+        rgbOutput[dst+1] = rgbOutput[src+1];
+        rgbOutput[dst+2] = rgbOutput[src+2];
     }
 
-    // Right column (x=width-1) - copy from x=width-2
-    for (int y = 0; y < height; y++) {
-        int srcIdx = (y * width + (width - 2)) * 3;
-        int dstIdx = (y * width + (width - 1)) * 3;
-        rgbOutput[dstIdx + 0] = rgbOutput[srcIdx + 0];
-        rgbOutput[dstIdx + 1] = rgbOutput[srcIdx + 1];
-        rgbOutput[dstIdx + 2] = rgbOutput[srcIdx + 2];
-    }
+    free(bayer8);
 }
 
 } // namespace mocha

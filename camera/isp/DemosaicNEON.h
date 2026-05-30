@@ -31,8 +31,6 @@ public:
 private:
     DemosaicParams mParams;
     bool mInitialized;
-
-    void demosaicLine(const uint16_t* bayerLine, uint8_t* rgbLine, int width);
 };
 
 } // namespace mocha

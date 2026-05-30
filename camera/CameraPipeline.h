@@ -1,7 +1,3 @@
-/*
- * CameraPipeline - Integrates V4L2 capture with NEON ISP processing
- */
-
 #ifndef MOCHA_CAMERA_PIPELINE_H
 #define MOCHA_CAMERA_PIPELINE_H
 
@@ -23,11 +19,19 @@ enum PipelineState {
 struct PipelineConfig {
     uint32_t width;
     uint32_t height;
-    uint32_t pixelFormat;  // V4L2 format
+    uint32_t pixelFormat;
     uint8_t bayerPattern;
     uint8_t offset_x;
     uint8_t offset_y;
+    bool flipV;
     bool enableISP;
+    uint16_t blackLevel;
+    float wbGain[4];
+    float ccm[9];
+    float gamma;
+    bool enableAE;
+    bool enableAWB;
+    float targetLuma;
 };
 
 struct V4l2Buffer {
@@ -52,8 +56,15 @@ public:
 
     PipelineState getState() const { return mState; }
 
+    int setExposure(int exposure);
+    int setGain(int gain);
+    int getExposure();
+    int getGain();
+
 private:
     int processBayerToYuv(const uint8_t* bayerData, uint8_t* output, uint32_t outputFormat);
+    void doAutoExposure(const uint8_t* rgbBuffer);
+    void doAutoWhiteBalance(const uint8_t* rgbBuffer);
 
     int mFd;
     int mCameraId;
@@ -71,6 +82,11 @@ private:
 
     uint8_t* mRgbBuffer;
     uint32_t mRgbBufferSize;
+
+    int mCurrentExposure;
+    int mCurrentGain;
+    float mAwbGains[4];
+    bool mHasAwbInit;
 };
 
 } // namespace mocha
