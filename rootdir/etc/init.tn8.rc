@@ -49,6 +49,8 @@ on init
     setprop sys.esrd.check_screen_off 1
     chown system system /sys/power/sysedp/batmon/esr
     chown system system /sys/bus/i2c/devices/1-0040/iio_device/running_mode
+    # LD_SHIM_LIBS para HAL1 legacy (libmocha_camera.so envuelve camera.vendor.tegra.so)
+    # El HAL3 (camera.tegra.so) NO usa estos shims.
     export LD_SHIM_LIBS "/system/vendor/lib/libnvomxadaptor.so|libmocha_omx.so:/system/lib/hw/camera.vendor.tegra.so|libmocha_camera.so:/system/lib/hw/camera.vendor.tegra.so|libmocha_libc.so"
    
 on property:dev.bootcomplete=1
