@@ -26,9 +26,10 @@ CameraPipeline::CameraPipeline()
       mStreaming(false),
       mBufferCount(0),
       mCurrentBuffer(0),
-      mCurrentExposure(2500),
-      mCurrentGain(32),
-      mHasAwbInit(false) {
+      mCurrentExposure(2400),
+      mCurrentGain(128),
+      mHasAwbInit(false),
+      mLastGamma(0.0f) {
     for (int i = 0; i < 4; i++) {
         mBuffers[i].start = nullptr;
         mBuffers[i].length = 0;
@@ -258,6 +259,13 @@ int CameraPipeline::configure(const PipelineConfig& config) {
     ALOGI("Initial exposure=%d gain=%d", mCurrentExposure, mCurrentGain);
     mHasAwbInit = false;
 
+    /* Rebuild gamma LUT if gamma changed */
+    if (mLastGamma != config.gamma) {
+        for (int i = 0; i < 256; i++)
+            mGammaLut[i] = (uint8_t)(powf(i / 255.0f, config.gamma) * 255.0f + 0.5f);
+        mLastGamma = config.gamma;
+    }
+
     return 0;
 }
 
@@ -298,15 +306,21 @@ int CameraPipeline::stopStreaming() {
 void CameraPipeline::doAutoExposure(const uint8_t* rgbBuffer) {
     if (!rgbBuffer || !mConfig.enableAE) return;
 
-    int total = mConfig.width * mConfig.height;
+    int w = mConfig.width;
+    int h = mConfig.height;
+    int step = 8;
     uint64_t sum = 0;
-    for (int i = 0; i < total; i++) {
-        int off = i * 3;
-        uint8_t r = rgbBuffer[off], g = rgbBuffer[off+1], b = rgbBuffer[off+2];
-        uint8_t y = (uint8_t)((r * 77 + g * 150 + b * 29) >> 8);
-        sum += y;
+    int count = 0;
+    for (int y = 0; y < h; y += step) {
+        for (int x = 0; x < w; x += step) {
+            int off = (y * w + x) * 3;
+            uint8_t r = rgbBuffer[off], g = rgbBuffer[off+1], b = rgbBuffer[off+2];
+            sum += (r * 77 + g * 150 + b * 29) >> 8;
+            count++;
+        }
     }
-    float avgLuma = (float)sum / total / 255.0f;
+    if (count == 0) return;
+    float avgLuma = (float)sum / count / 255.0f;
     float target = mConfig.targetLuma;
 
     if (avgLuma < 0.01f) return;
@@ -317,14 +331,14 @@ void CameraPipeline::doAutoExposure(const uint8_t* rgbBuffer) {
     int newExp = (int)(mCurrentExposure * ratio);
     int newGain = mCurrentGain;
 
-    if (newExp > 2450) {
-        newGain = (int)(mCurrentGain * (newExp / 2450.0f));
-        newExp = 2450;
+    if (newExp > 2490) {
+        newGain = (int)(mCurrentGain * (newExp / 2490.0f));
+        newExp = 2490;
     }
     if (newExp < 10) {
         newExp = 10;
     }
-    if (newGain > 240) newGain = 240;
+    if (newGain > 250) newGain = 250;
     if (newGain < 1) newGain = 1;
 
     if (newExp != mCurrentExposure || newGain != mCurrentGain) {
@@ -338,16 +352,20 @@ void CameraPipeline::doAutoExposure(const uint8_t* rgbBuffer) {
 void CameraPipeline::doAutoWhiteBalance(const uint8_t* rgbBuffer) {
     if (!rgbBuffer || !mConfig.enableAWB) return;
 
-    int total = mConfig.width * mConfig.height;
+    int w = mConfig.width;
+    int h = mConfig.height;
+    int step = 16;
     uint64_t sumR = 0, sumG = 0, sumB = 0;
     int pixelCount = 0;
 
-    for (int i = 0; i < total; i += 4) {
-        int off = i * 3;
-        sumR += rgbBuffer[off];
-        sumG += rgbBuffer[off+1];
-        sumB += rgbBuffer[off+2];
-        pixelCount++;
+    for (int y = 0; y < h; y += step) {
+        for (int x = 0; x < w; x += step) {
+            int off = (y * w + x) * 3;
+            sumR += rgbBuffer[off];
+            sumG += rgbBuffer[off+1];
+            sumB += rgbBuffer[off+2];
+            pixelCount++;
+        }
     }
 
     if (pixelCount < 100) return;
@@ -450,18 +468,6 @@ int CameraPipeline::captureFrame(uint8_t* outputBuffer, uint32_t outputFormat) {
         ret = 0;
     }
 
-    /* DEBUG: dump output buffer pixels (first 4 pixels center row) */
-    if (outputFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
-        int mid_y = mConfig.height / 2;
-        int mid_x = mConfig.width / 2;
-        int off = (mid_y * mConfig.width + mid_x) * 4;
-        ALOGD("OUTbuf[%d,%d] RGBA=%02x %02x %02x %02x | [%d,%d] RGBA=%02x %02x %02x %02x",
-              mid_x, mid_y,
-              outputBuffer[off], outputBuffer[off+1], outputBuffer[off+2], outputBuffer[off+3],
-              mid_x+1, mid_y,
-              outputBuffer[off+4], outputBuffer[off+5], outputBuffer[off+6], outputBuffer[off+7]);
-    }
-
     buf.m.userptr = (unsigned long)mBuffers[buf.index].start;
     buf.length = mBuffers[buf.index].length;
     if (ioctl(mFd, VIDIOC_QBUF, &buf) < 0) return -errno;
@@ -474,44 +480,60 @@ int CameraPipeline::processBayerToYuv(const uint8_t* bayerData, uint8_t* output,
 
     mDemosaic->process(bayerData, mRgbBuffer);
 
+    /* AE update before applying gains */
+    if (mConfig.enableAE)
+        doAutoExposure(mRgbBuffer);
+
     /* AWB update before applying gains */
     if (mConfig.enableAWB)
         doAutoWhiteBalance(mRgbBuffer);
 
-    /* White Balance gains (from AWB if enabled, else from config) */
-    {
-        int total = mConfig.width * mConfig.height;
-        float rG = mConfig.enableAWB ? mAwbGains[0] : mConfig.wbGain[0];
-        float gG = mConfig.enableAWB ? mAwbGains[1] : mConfig.wbGain[1];
-        float bG = mConfig.enableAWB ? mAwbGains[2] : mConfig.wbGain[2];
-        if (rG != 1.0f || gG != 1.0f || bG != 1.0f) {
-            for (int i = 0; i < total; i++) {
-                int off = i * 3;
-                int r = (int)(mRgbBuffer[off]   * rG);
-                int g = (int)(mRgbBuffer[off+1] * gG);
-                int b = (int)(mRgbBuffer[off+2] * bG);
-                mRgbBuffer[off]   = r > 255 ? 255 : (uint8_t)r;
-                mRgbBuffer[off+1] = g > 255 ? 255 : (uint8_t)g;
-                mRgbBuffer[off+2] = b > 255 ? 255 : (uint8_t)b;
-            }
-        }
-    }
-
-    applyGamma(mRgbBuffer, mConfig.width, mConfig.height, mConfig.gamma);
+    float rG = mConfig.enableAWB ? mAwbGains[0] : mConfig.wbGain[0];
+    float gG = mConfig.enableAWB ? mAwbGains[1] : mConfig.wbGain[1];
+    float bG = mConfig.enableAWB ? mAwbGains[2] : mConfig.wbGain[2];
 
     if (outputFormat == HAL_PIXEL_FORMAT_YCBCR_420_888) {
+        /* For YUV: apply WB gains in-place first, then gamma, then convert */
+        {
+            int total = mConfig.width * mConfig.height;
+            if (rG != 1.0f || gG != 1.0f || bG != 1.0f) {
+                for (int i = 0; i < total; i++) {
+                    int off = i * 3;
+                    int r = (int)(mRgbBuffer[off]   * rG);
+                    int g = (int)(mRgbBuffer[off+1] * gG);
+                    int b = (int)(mRgbBuffer[off+2] * bG);
+                    mRgbBuffer[off]   = r > 255 ? 255 : (uint8_t)r;
+                    mRgbBuffer[off+1] = g > 255 ? 255 : (uint8_t)g;
+                    mRgbBuffer[off+2] = b > 255 ? 255 : (uint8_t)b;
+                }
+            }
+        }
+        applyGamma(mRgbBuffer, mConfig.width, mConfig.height, mConfig.gamma);
         uint8_t* yPlane = output;
         uint8_t* uvPlane = output + mConfig.width * mConfig.height;
         mColorConv->rgbToNv12(mRgbBuffer, yPlane, uvPlane);
     } else if (outputFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
-        mColorConv->rgbToRgba(mRgbBuffer, output, mConfig.width, mConfig.height);
-        if (mConfig.flipV) flipVertical(output, mConfig.width, mConfig.height, 4);
-        /* DEBUG: check 2 pixels from center of RGBA output */
-        int mid = (mConfig.height/2)*mConfig.width + mConfig.width/2;
-        ALOGD("RGBAout[center]=%02x%02x%02x%02x [center+1]=%02x%02x%02x%02x",
-              output[mid*4], output[mid*4+1], output[mid*4+2], output[mid*4+3],
-              output[(mid+1)*4], output[(mid+1)*4+1], output[(mid+1)*4+2], output[(mid+1)*4+3]);
+        /* Merged WB + gamma + RGB→RGBA + flip in one pass */
+        mColorConv->rgbToRgbaWbGamma(mRgbBuffer, output,
+                                     mConfig.width, mConfig.height,
+                                     rG, gG, bG, mGammaLut, mConfig.flipV);
     } else {
+        /* For other formats: apply WB and gamma, then raw copy */
+        {
+            int total = mConfig.width * mConfig.height;
+            if (rG != 1.0f || gG != 1.0f || bG != 1.0f) {
+                for (int i = 0; i < total; i++) {
+                    int off = i * 3;
+                    int r = (int)(mRgbBuffer[off]   * rG);
+                    int g = (int)(mRgbBuffer[off+1] * gG);
+                    int b = (int)(mRgbBuffer[off+2] * bG);
+                    mRgbBuffer[off]   = r > 255 ? 255 : (uint8_t)r;
+                    mRgbBuffer[off+1] = g > 255 ? 255 : (uint8_t)g;
+                    mRgbBuffer[off+2] = b > 255 ? 255 : (uint8_t)b;
+                }
+            }
+        }
+        applyGamma(mRgbBuffer, mConfig.width, mConfig.height, mConfig.gamma);
         memcpy(output, mRgbBuffer, mRgbBufferSize);
     }
 

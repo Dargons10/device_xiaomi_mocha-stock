@@ -29,8 +29,15 @@ public:
     void process(const uint8_t* bayerInput, uint8_t* rgbOutput);
 
 private:
+    void processRowPairRg(const uint8_t* cur, const uint8_t* prev, const uint8_t* next,
+                          uint8_t* out, int w);
+    void processRowPairGb(const uint8_t* cur, const uint8_t* prev, const uint8_t* next,
+                          uint8_t* out, int w);
+
     DemosaicParams mParams;
     bool mInitialized;
+    uint8_t* mBayerBuf;
+    uint32_t mBayerBufSize;
 };
 
 } // namespace mocha

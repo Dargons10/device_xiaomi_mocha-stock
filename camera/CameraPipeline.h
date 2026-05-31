@@ -87,6 +87,8 @@ private:
     int mCurrentGain;
     float mAwbGains[4];
     bool mHasAwbInit;
+    uint8_t mGammaLut[256];
+    float mLastGamma;
 };
 
 } // namespace mocha

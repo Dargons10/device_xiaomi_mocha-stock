@@ -198,4 +198,82 @@ void ColorConvNEON::rgbToRgba(const uint8_t* rgb, uint8_t* rgba, uint32_t width,
     }
 }
 
+void ColorConvNEON::rgbToRgbaWbGamma(const uint8_t* rgb, uint8_t* rgba,
+                                     uint32_t width, uint32_t height,
+                                     float rGain, float gGain, float bGain,
+                                     const uint8_t* gammaLut, bool flipV) {
+    if (!rgb || !rgba || !gammaLut) return;
+
+    /* Precompute 16-bit fixed-point WB gains (Q8.8) */
+    int rG = (int)(rGain * 256.0f + 0.5f);
+    int gG = (int)(gGain * 256.0f + 0.5f);
+    int bG = (int)(bGain * 256.0f + 0.5f);
+
+    uint32_t stride = width * 4;
+
+    for (uint32_t y = 0; y < height; y++) {
+        uint32_t srcRow = flipV ? (height - 1 - y) : y;
+        const uint8_t* src = rgb + srcRow * width * 3;
+        uint8_t* dst = rgba + y * stride;
+        uint32_t x = 0;
+
+        /* NEON: process 8 pixels per iteration */
+        for (; x + 8 <= width; x += 8) {
+            uint8x8x3_t rgb3 = vld3_u8(src + x * 3);
+
+            uint16x8_t r16 = vmovl_u8(rgb3.val[0]);
+            uint16x8_t g16 = vmovl_u8(rgb3.val[1]);
+            uint16x8_t b16 = vmovl_u8(rgb3.val[2]);
+
+            /* Apply WB gains: val = (pixel * gain_Q8 + 128) >> 8, widens to 32-bit */
+            uint16x8_t rGv = vdupq_n_u16(rG);
+            uint16x8_t gGv = vdupq_n_u16(gG);
+            uint16x8_t bGv = vdupq_n_u16(bG);
+
+            uint32x4_t r_lo = vmull_u16(vget_low_u16(r16), vget_low_u16(rGv));
+            uint32x4_t r_hi = vmull_u16(vget_high_u16(r16), vget_high_u16(rGv));
+            uint32x4_t g_lo = vmull_u16(vget_low_u16(g16), vget_low_u16(gGv));
+            uint32x4_t g_hi = vmull_u16(vget_high_u16(g16), vget_high_u16(gGv));
+            uint32x4_t b_lo = vmull_u16(vget_low_u16(b16), vget_low_u16(bGv));
+            uint32x4_t b_hi = vmull_u16(vget_high_u16(b16), vget_high_u16(bGv));
+
+            uint32x4_t round = vdupq_n_u32(128);
+            uint16x8_t rWb = vcombine_u16(vshrn_n_u32(vaddq_u32(r_lo, round), 8),
+                                          vshrn_n_u32(vaddq_u32(r_hi, round), 8));
+            uint16x8_t gWb = vcombine_u16(vshrn_n_u32(vaddq_u32(g_lo, round), 8),
+                                          vshrn_n_u32(vaddq_u32(g_hi, round), 8));
+            uint16x8_t bWb = vcombine_u16(vshrn_n_u32(vaddq_u32(b_lo, round), 8),
+                                          vshrn_n_u32(vaddq_u32(b_hi, round), 8));
+
+            /* Clamp to 0-255 */
+            uint8x8_t rClamp = vqmovn_u16(rWb);
+            uint8x8_t gClamp = vqmovn_u16(gWb);
+            uint8x8_t bClamp = vqmovn_u16(bWb);
+
+            /* Apply gamma LUT and write RGBA (scalar: 24 LUT lookups is trivial) */
+            uint8_t rgba_buf[32];
+            for (int i = 0; i < 8; i++) {
+                rgba_buf[i*4]   = gammaLut[rClamp[i]];
+                rgba_buf[i*4+1] = gammaLut[gClamp[i]];
+                rgba_buf[i*4+2] = gammaLut[bClamp[i]];
+                rgba_buf[i*4+3] = 255;
+            }
+            memcpy(dst + x * 4, rgba_buf, 32);
+        }
+
+        /* Remainder */
+        for (; x < width; x++) {
+            int si = (int)(srcRow * width + x) * 3;
+            int di = (int)(y * stride + x * 4);
+            int r = (rgb[si]   * rG + 128) >> 8;
+            int g = (rgb[si+1] * gG + 128) >> 8;
+            int b = (rgb[si+2] * bG + 128) >> 8;
+            rgba[di]   = gammaLut[r > 255 ? 255 : r];
+            rgba[di+1] = gammaLut[g > 255 ? 255 : g];
+            rgba[di+2] = gammaLut[b > 255 ? 255 : b];
+            rgba[di+3] = 255;
+        }
+    }
+}
+
 } // namespace mocha

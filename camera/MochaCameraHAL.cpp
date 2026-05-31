@@ -682,7 +682,7 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
      pipelineConfig.gamma = 0.55f;
 
      // Auto Exposure y Auto White Balance
-     pipelineConfig.enableAE = false;
+     pipelineConfig.enableAE = true;
      pipelineConfig.enableAWB = true;  // corrige tinte verdoso
     pipelineConfig.targetLuma = 0.55f;
 
@@ -848,6 +848,69 @@ static const camera_metadata_t* camera_device_construct_default_request_settings
     return metadata;
 }
 
+static camera_metadata_t* build_result_metadata(uint32_t frameNumber, int64_t timestamp, int32_t exposureVal, int32_t sensitivity) {
+    camera_metadata_t* metadata = allocate_camera_metadata(24, 512);
+    if (!metadata) return nullptr;
+
+    /* ANDROID_CONTROL_AE_MODE */
+    uint8_t aeMode = ANDROID_CONTROL_AE_MODE_ON;
+    add_camera_metadata_entry(metadata, ANDROID_CONTROL_AE_MODE, &aeMode, 1);
+
+    /* ANDROID_CONTROL_AE_STATE */
+    uint8_t aeState = ANDROID_CONTROL_AE_STATE_CONVERGED;
+    add_camera_metadata_entry(metadata, ANDROID_CONTROL_AE_STATE, &aeState, 1);
+
+    /* ANDROID_CONTROL_AWB_MODE */
+    uint8_t awbMode = ANDROID_CONTROL_AWB_MODE_AUTO;
+    add_camera_metadata_entry(metadata, ANDROID_CONTROL_AWB_MODE, &awbMode, 1);
+
+    /* ANDROID_CONTROL_AWB_STATE */
+    uint8_t awbState = ANDROID_CONTROL_AWB_STATE_CONVERGED;
+    add_camera_metadata_entry(metadata, ANDROID_CONTROL_AWB_STATE, &awbState, 1);
+
+    /* ANDROID_CONTROL_MODE */
+    uint8_t controlMode = ANDROID_CONTROL_MODE_AUTO;
+    add_camera_metadata_entry(metadata, ANDROID_CONTROL_MODE, &controlMode, 1);
+
+    /* ANDROID_FLASH_MODE */
+    uint8_t flashMode = ANDROID_FLASH_MODE_OFF;
+    add_camera_metadata_entry(metadata, ANDROID_FLASH_MODE, &flashMode, 1);
+
+    /* ANDROID_JPEG_QUALITY */
+    uint8_t jpegQuality = 95;
+    add_camera_metadata_entry(metadata, ANDROID_JPEG_QUALITY, &jpegQuality, 1);
+
+    /* ANDROID_LENS_FOCUS_DISTANCE */
+    float focusDistance = 0.0f;
+    add_camera_metadata_entry(metadata, ANDROID_LENS_FOCUS_DISTANCE, &focusDistance, 1);
+
+    /* ANDROID_REQUEST_ID */
+    int32_t requestId = (int32_t)frameNumber;
+    add_camera_metadata_entry(metadata, ANDROID_REQUEST_ID, &requestId, 1);
+
+    /* ANDROID_SCALER_CROP_REGION - full sensor */
+    int32_t cropRegion[] = {0, 0, 3280, 2464};
+    add_camera_metadata_entry(metadata, ANDROID_SCALER_CROP_REGION, cropRegion, 4);
+
+    /* ANDROID_SENSOR_EXPOSURE_TIME (ns) */
+    int64_t expTimeNs = (int64_t)exposureVal * 1000LL;
+    add_camera_metadata_entry(metadata, ANDROID_SENSOR_EXPOSURE_TIME, &expTimeNs, 1);
+
+    /* ANDROID_SENSOR_FRAME_DURATION (ns for 30fps) */
+    int64_t frameDuration = 33333333LL;
+    add_camera_metadata_entry(metadata, ANDROID_SENSOR_FRAME_DURATION, &frameDuration, 1);
+
+    /* ANDROID_SENSOR_SENSITIVITY */
+    int32_t sensorSensitivity = sensitivity;
+    add_camera_metadata_entry(metadata, ANDROID_SENSOR_SENSITIVITY, &sensorSensitivity, 1);
+
+    /* ANDROID_SENSOR_TIMESTAMP */
+    add_camera_metadata_entry(metadata, ANDROID_SENSOR_TIMESTAMP, &timestamp, 1);
+
+    sort_camera_metadata(metadata);
+    return metadata;
+}
+
 static int camera_device_process_capture_request(const camera3_device_t *device, camera3_capture_request_t *request) {
     if (!device || !request) {
         ALOGE("Invalid parameters");
@@ -1009,14 +1072,6 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
                     int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(vaddr), dev->stream_format);
                     if (captureRet == 0) {
                         frameCaptured = true;
-                        /* DEBUG: dump 2 pixels from center of vaddr buffer */
-                        int stride = dev->stream_width * 4; /* RGBA_8888 */
-                        int cx = dev->stream_width / 2, cy = dev->stream_height / 2;
-                        int off = cy * stride + cx * 4;
-                        uint8_t* v = (uint8_t*)vaddr;
-                        ALOGD("VADDR[%d,%d]=%02x %02x %02x %02x  [%d,%d]=%02x %02x %02x %02x",
-                              cx, cy, v[off], v[off+1], v[off+2], v[off+3],
-                              cx+1, cy, v[off+4], v[off+5], v[off+6], v[off+7]);
                     } else if (captureRet == -EAGAIN) {
                         grallocModule->unlock(grallocModule, handle);
                         if (dev->inflight_tracker) dev->inflight_tracker->remove(frameNum);
@@ -1073,14 +1128,31 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
         }
     }
 
+    camera_metadata_t* resultMetadata = nullptr;
+    if (frameCaptured && !frameFlushed) {
+        int32_t exposure = 2400, sensitivity = 128;
+        if (dev->pipeline) {
+            mocha::CameraPipeline* p = static_cast<mocha::CameraPipeline*>(dev->pipeline);
+            exposure = p->getExposure();
+            sensitivity = p->getGain();
+        }
+        int64_t timestamp = ((int64_t)ts_end.tv_sec * 1000000000LL) + (ts_end.tv_nsec);
+        resultMetadata = build_result_metadata(frameNum, timestamp, exposure, sensitivity);
+    }
+
     camera3_capture_result_t result;
     memset(&result, 0, sizeof(result));
     result.frame_number = request->frame_number;
-    result.result = nullptr;
+    result.result = resultMetadata;
     result.num_output_buffers = 1;
     result.output_buffers = &outputBuf;
-    result.partial_result = 0;
+    result.partial_result = 1;
     dev->callback_ops->process_capture_result(dev->callback_ops, &result);
+
+    if (resultMetadata) {
+        free_camera_metadata(resultMetadata);
+    }
+
     ALOGI("Capture request completed: frame=%llu status=%d", (unsigned long long)request->frame_number, outputBuf.status);
     
     return 0;

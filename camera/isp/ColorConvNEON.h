@@ -23,6 +23,12 @@ public:
     // Convert RGB to RGBA
     void rgbToRgba(const uint8_t* rgb, uint8_t* rgba, uint32_t width, uint32_t height);
 
+    // RGB → RGBA with WB gains, gamma LUT, and vertical flip in one pass
+    void rgbToRgbaWbGamma(const uint8_t* rgb, uint8_t* rgba,
+                          uint32_t width, uint32_t height,
+                          float rGain, float gGain, float bGain,
+                          const uint8_t* gammaLut, bool flipV);
+
 private:
     uint16_t mWidth;
     uint16_t mHeight;
