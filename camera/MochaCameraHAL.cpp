@@ -81,9 +81,9 @@ struct mocha_camera_device_t {
     void* pipeline;
     InFlightTracker* inflight_tracker;
     camera3_stream_t* output_stream;
-    uint32_t stream_width;
-    uint32_t stream_height;
-    uint32_t stream_format;
+    uint32_t pipeline_width;
+
+    uint32_t pipeline_height;
     uint32_t last_config_width;
     uint32_t last_config_height;
 
@@ -578,7 +578,8 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
 
     mocha_camera_device_t *dev = (mocha_camera_device_t *)device;
 
-    // Find primary output stream
+    // Find pipeline stream (first non-BLOB) and set max_buffers on all
+    camera3_stream_t* pipelineStream = nullptr;
     camera3_stream_t* outputStream = nullptr;
     for (uint32_t i = 0; i < config->num_streams; i++) {
         camera3_stream_t *stream = config->streams[i];
@@ -591,8 +592,10 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
         }
 
         if (stream->stream_type == CAMERA3_STREAM_OUTPUT) {
-            outputStream = stream;
             stream->max_buffers = 2;
+            outputStream = stream;
+            if (!pipelineStream && stream->format != HAL_PIXEL_FORMAT_BLOB)
+                pipelineStream = stream;
         }
     }
 
@@ -600,15 +603,16 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
         ALOGE("No output stream configured");
         return -EINVAL;
     }
+    if (!pipelineStream) pipelineStream = outputStream;
 
     // Early exit if same resolution - avoids costly STREAMOFF/STREAMON cycle
-    if (dev->last_config_width == outputStream->width &&
-        dev->last_config_height == outputStream->height &&
+    if (dev->last_config_width == pipelineStream->width &&
+        dev->last_config_height == pipelineStream->height &&
         dev->streams_configured && dev->pipeline) {
         mocha::CameraPipeline* p = static_cast<mocha::CameraPipeline*>(dev->pipeline);
         if (p->getState() == mocha::PIPELINE_STREAMING) {
             ALOGI("configureStreams: same %ux%u capture as last - no-op reinit",
-                  outputStream->width, outputStream->height);
+                  pipelineStream->width, pipelineStream->height);
             return 0;
         }
         ALOGI("configureStreams: same resolution but pipeline not streaming, reconfiguring");
@@ -659,8 +663,8 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
     }
 
     mocha::PipelineConfig pipelineConfig;
-    pipelineConfig.width = outputStream->width;
-    pipelineConfig.height = outputStream->height;
+    pipelineConfig.width = pipelineStream->width;
+    pipelineConfig.height = pipelineStream->height;
     /* DEBUG: Probando BGGR para IMX179 (commented code usaba BGGR(1,1) y daba colores).
        El sensor podría ser BGGR pese a que la V4L2 driver dice SRGGB.
        Usar identidad WB para ver línea base, luego ajustar. */
@@ -687,8 +691,12 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
     pipelineConfig.targetLuma = 0.55f;
 
     // Forzar RGBA_8888 para streams que no sean BLOB
-    if (outputStream->format != HAL_PIXEL_FORMAT_BLOB) {
-        outputStream->format = HAL_PIXEL_FORMAT_RGBA_8888;
+    for (uint32_t i = 0; i < config->num_streams; i++) {
+        camera3_stream_t *stream = config->streams[i];
+        if (stream->stream_type == CAMERA3_STREAM_OUTPUT &&
+            stream->format != HAL_PIXEL_FORMAT_BLOB) {
+            stream->format = HAL_PIXEL_FORMAT_RGBA_8888;
+        }
     }
     uint32_t v4l2Format = (dev->camera_id == 0) ? V4L2_PIX_FMT_SRGGB10 : V4L2_PIX_FMT_SBGGR10;
 
@@ -714,15 +722,16 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
 
     dev->pipeline = pipeline;
     dev->output_stream = outputStream;
-    dev->stream_width = outputStream->width;
-    dev->stream_height = outputStream->height;
-    dev->stream_format = outputStream->format;
-    dev->last_config_width = outputStream->width;
-    dev->last_config_height = outputStream->height;
+    dev->pipeline_width = pipelineStream->width;
+    dev->pipeline_height = pipelineStream->height;
+    dev->last_config_width = pipelineStream->width;
+    dev->last_config_height = pipelineStream->height;
 
     dev->streams_configured = true;
-    ALOGI("Streams configured successfully: %dx%d format=%d", 
-          dev->stream_width, dev->stream_height, dev->stream_format);
+    ALOGI("Streams configured successfully: pipeline=%dx%d preview=%dx%d BLOB=%s", 
+          dev->pipeline_width, dev->pipeline_height,
+          pipelineStream->width, pipelineStream->height,
+          (outputStream->format == HAL_PIXEL_FORMAT_BLOB) ? "yes" : "no");
     return 0;
 }
 
@@ -975,15 +984,27 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
         close(fence);
     }
 
-    ALOGI("Processing capture: frame=%llu stream=%dx%d format=%d",
+    ALOGI("Processing capture: frame=%llu stream=%dx%d format=%d pipeline=%dx%d",
           (unsigned long long)request->frame_number,
-          dev->stream_width, dev->stream_height, dev->stream_format);
+          buf.stream->width, buf.stream->height, buf.stream->format,
+          dev->pipeline_width, dev->pipeline_height);
 
     bool frameCaptured = false;
 
     // Capture frame from pipeline
     if (dev->pipeline && dev->streams_configured) {
         mocha::CameraPipeline* pipeline = static_cast<mocha::CameraPipeline*>(dev->pipeline);
+
+        // Auto-restart pipeline if it was stopped by flush()
+        if (pipeline->getState() == mocha::PIPELINE_OPENED) {
+            ALOGI("process_capture_request: pipeline in OPENED state, re-starting streaming");
+            int restartRet = pipeline->startStreaming();
+            if (restartRet != 0) {
+                ALOGE("Auto-restart streaming failed: %d", restartRet);
+                if (dev->inflight_tracker) dev->inflight_tracker->remove(frameNum);
+                return -ENODEV;
+            }
+        }
 
         buffer_handle_t handle = *buf.buffer;
         void* vaddr = nullptr;
@@ -997,9 +1018,9 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
             grallocModule = reinterpret_cast<const gralloc_module_t*>(module);
 
             /* BLOB format = JPEG still capture */
-            if (dev->stream_format == HAL_PIXEL_FORMAT_BLOB) {
-                /* Allocate temp RGBA buffer for pipeline */
-                uint32_t rgbaSize = dev->stream_width * dev->stream_height * 4;
+            if (buf.stream->format == HAL_PIXEL_FORMAT_BLOB) {
+                /* Allocate temp RGBA buffer at pipeline resolution */
+                uint32_t rgbaSize = dev->pipeline_width * dev->pipeline_height * 4;
                 if (!dev->temp_rgba || dev->temp_rgba_size < rgbaSize) {
                     if (dev->temp_rgba) free(dev->temp_rgba);
                     dev->temp_rgba = (uint8_t*)malloc(rgbaSize);
@@ -1010,20 +1031,22 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
                 } else {
                     int captureRet = pipeline->captureFrame(dev->temp_rgba, HAL_PIXEL_FORMAT_RGBA_8888);
                     if (captureRet == 0) {
-                        /* Lock the output blob buffer */
+                        /* Lock the output blob buffer using its own dimensions */
+                        uint32_t blobW = buf.stream->width;
+                        uint32_t blobH = buf.stream->height;
                         int ret = grallocModule->lock(grallocModule, handle,
                                                        GRALLOC_USAGE_SW_WRITE_OFTEN,
-                                                       0, 0, dev->stream_width, dev->stream_height, &vaddr);
+                                                       0, 0, blobW, blobH, &vaddr);
                         if (ret == 0 && vaddr) {
                             /* Initialize JPEG encoder */
                             if (!dev->jpeg_encoder) {
                                 dev->jpeg_encoder = new mocha::JpegEncoder();
                             }
-                            /* Encode RGBA to JPEG in-place in the blob buffer */
+                            /* Encode RGBA to JPEG at pipeline resolution into blob buffer */
                             size_t jpegSize = 0;
-                            uint32_t blobSize = dev->stream_width * dev->stream_height * 2;
+                            uint32_t blobSize = blobW * blobH * 2;
                             ret = dev->jpeg_encoder->encodeRGBA(dev->temp_rgba,
-                                                                  dev->stream_width, dev->stream_height,
+                                                                  dev->pipeline_width, dev->pipeline_height,
                                                                   90, (uint8_t*)vaddr, blobSize, &jpegSize);
                             if (ret == 0 && jpegSize > 0) {
                                 /* Write camera3_jpeg_blob at the end */
@@ -1033,7 +1056,9 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
                                 uint8_t* blobPtr = (uint8_t*)vaddr + blobSize - sizeof(blob);
                                 memcpy(blobPtr, &blob, sizeof(blob));
                                 frameCaptured = true;
-                                ALOGI("JPEG captured: %dx%d -> %zu bytes", dev->stream_width, dev->stream_height, jpegSize);
+                                ALOGI("JPEG captured: pipeline=%dx%d blob=%dx%d -> %zu bytes",
+                                      dev->pipeline_width, dev->pipeline_height,
+                                      blobW, blobH, jpegSize);
                             } else {
                                 ALOGE("JPEG encode failed: %d", ret);
                             }
@@ -1048,13 +1073,13 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
                         ALOGE("Failed to capture frame for JPEG: %d", captureRet);
                     }
                 }
-            } else if (dev->stream_format == HAL_PIXEL_FORMAT_YCBCR_420_888 && grallocModule->lock_ycbcr) {
+            } else if (buf.stream->format == HAL_PIXEL_FORMAT_YCBCR_420_888 && grallocModule->lock_ycbcr) {
                 struct android_ycbcr ycbcr;
                 memset(&ycbcr, 0, sizeof(ycbcr));
                 int ret = grallocModule->lock_ycbcr(grallocModule, handle, GRALLOC_USAGE_SW_WRITE_OFTEN,
-                                                    0, 0, dev->stream_width, dev->stream_height, &ycbcr);
+                                                    0, 0, buf.stream->width, buf.stream->height, &ycbcr);
                 if (ret == 0 && ycbcr.y) {
-                    int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(ycbcr.y), dev->stream_format);
+                    int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(ycbcr.y), buf.stream->format);
                     if (captureRet == 0) {
                         frameCaptured = true;
                     } else if (captureRet == -EAGAIN) {
@@ -1067,9 +1092,9 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
             } else {
                 int usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
                 int ret = grallocModule->lock(grallocModule, handle, usage,
-                                              0, 0, dev->stream_width, dev->stream_height, &vaddr);
+                                              0, 0, buf.stream->width, buf.stream->height, &vaddr);
                 if (ret == 0 && vaddr) {
-                    int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(vaddr), dev->stream_format);
+                    int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(vaddr), buf.stream->format);
                     if (captureRet == 0) {
                         frameCaptured = true;
                     } else if (captureRet == -EAGAIN) {
@@ -1183,16 +1208,23 @@ static int camera_device_flush(const camera3_device_t *device) {
 
     mocha_camera_device_t *dev = (mocha_camera_device_t *)device;
     
-    // Mark all in-flight requests as errors - framework will retry them
-    // This is the reference HAL pattern: don't restart V4L2, just cancel pending requests
-    if (dev->inflight_tracker && dev->callback_ops) {
-        size_t inFlightCount = dev->inflight_tracker->count();
-        ALOGI("Flushing: marking %zu in-flight requests as errors", inFlightCount);
-        dev->inflight_tracker->markAllAsError();
+    // Stop V4L2 streaming IMMEDIATELY to interrupt any threads blocked
+    // in captureFrame() (poll/DQBUF). Without this, those threads stay
+    // blocked for 1800ms per retry, causing the framework's drain to
+    // hit the 30-second timeout, which keeps the camera "in use".
+    if (dev->pipeline && dev->streams_configured) {
+        mocha::CameraPipeline* p = static_cast<mocha::CameraPipeline*>(dev->pipeline);
+        p->stopStreaming();
     }
     
-    // Brief delay to let any in-flight V4L2 capture complete naturally
-    usleep(50000); // 50ms
+    // Mark any remaining in-flight requests as error and drain. The
+    // threads that were in captureFrame() will return -EAGAIN (since
+    // V4L2 is stopped), and the framework will handle those.
+    if (dev->inflight_tracker) {
+        dev->inflight_tracker->markAllAsError();
+        std::vector<uint32_t> drained = dev->inflight_tracker->drainAll();
+        ALOGI("Flush: drained %zu frames", drained.size());
+    }
     
     ALOGI("Flush complete");
     return 0;

@@ -19,19 +19,23 @@ struct jpeg_dest_mgr {
     struct jpeg_destination_mgr pub;
     uint8_t* buffer;
     size_t bufferSize;
+    bool overflow;
 };
 
 static void dest_init_destination(j_compress_ptr cinfo) {
     jpeg_dest_mgr* dest = (jpeg_dest_mgr*)cinfo->dest;
     dest->pub.next_output_byte = dest->buffer;
     dest->pub.free_in_buffer = dest->bufferSize;
+    dest->overflow = false;
 }
 
 static boolean dest_empty_output_buffer(j_compress_ptr cinfo) {
-    return TRUE;
+    jpeg_dest_mgr* dest = (jpeg_dest_mgr*)cinfo->dest;
+    dest->overflow = true;
+    return FALSE;
 }
 
-static void dest_term_destination(j_compress_ptr cinfo) {}
+static void dest_term_destination(j_compress_ptr cinfo) { (void)cinfo; }
 
 int JpegEncoder::encodeRGBA(const uint8_t* rgba, int width, int height, int quality,
                             uint8_t* output, size_t outputSize, size_t* jpegSize) {
@@ -61,7 +65,7 @@ int JpegEncoder::encodeRGBA(const uint8_t* rgba, int width, int height, int qual
 
     jpeg_start_compress(&cinfo, TRUE);
 
-    row_stride = width * 4; /* RGBA stride */
+    row_stride = width * 4;
 
     uint8_t* rgbRow = (uint8_t*)malloc(width * 3);
     if (!rgbRow) {
@@ -72,18 +76,26 @@ int JpegEncoder::encodeRGBA(const uint8_t* rgba, int width, int height, int qual
     while (cinfo.next_scanline < (JDIMENSION)height) {
         const uint8_t* src = rgba + cinfo.next_scanline * row_stride;
         for (int x = 0; x < width; x++) {
-            rgbRow[x * 3 + 0] = src[x * 4 + 0]; /* R */
-            rgbRow[x * 3 + 1] = src[x * 4 + 1]; /* G */
-            rgbRow[x * 3 + 2] = src[x * 4 + 2]; /* B */
+            rgbRow[x * 3 + 0] = src[x * 4 + 0];
+            rgbRow[x * 3 + 1] = src[x * 4 + 1];
+            rgbRow[x * 3 + 2] = src[x * 4 + 2];
         }
         row_pointer[0] = rgbRow;
         jpeg_write_scanlines(&cinfo, row_pointer, 1);
+        if (dest.overflow) break;
     }
 
     free(rgbRow);
     jpeg_finish_compress(&cinfo);
 
     *jpegSize = outputSize - dest.pub.free_in_buffer;
+
+    if (dest.overflow) {
+        ALOGE("JPEG output buffer too small: %zu bytes used, %zu available",
+              *jpegSize, outputSize);
+        jpeg_destroy_compress(&cinfo);
+        return -ENOSPC;
+    }
 
     ALOGI("JPEG encoded %dx%d quality=%d -> %zu bytes", width, height, quality, *jpegSize);
 

@@ -27,7 +27,7 @@ CameraPipeline::CameraPipeline()
       mBufferCount(0),
       mCurrentBuffer(0),
       mCurrentExposure(2400),
-      mCurrentGain(128),
+      mCurrentGain(64),
       mHasAwbInit(false),
       mLastGamma(0.0f) {
     for (int i = 0; i < 4; i++) {
@@ -253,10 +253,6 @@ int CameraPipeline::configure(const PipelineConfig& config) {
         mRgbBuffer = new uint8_t[mRgbBufferSize];
     }
 
-    /* Always set initial exposure/gain via V4L2 controls */
-    setExposure(mCurrentExposure);
-    setGain(mCurrentGain);
-    ALOGI("Initial exposure=%d gain=%d", mCurrentExposure, mCurrentGain);
     mHasAwbInit = false;
 
     /* Rebuild gamma LUT if gamma changed */
@@ -271,6 +267,21 @@ int CameraPipeline::configure(const PipelineConfig& config) {
 
 int CameraPipeline::startStreaming() {
     if (mState != PIPELINE_OPENED) return -EINVAL;
+
+    /* Re-request buffers (idempotent: reuses existing if count matches) */
+    struct v4l2_requestbuffers req;
+    memset(&req, 0, sizeof(req));
+    req.count = mBufferCount;
+    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.memory = V4L2_MEMORY_USERPTR;
+    if (ioctl(mFd, VIDIOC_REQBUFS, &req) < 0) {
+        ALOGE("startStreaming REQBUFS failed: %s", strerror(errno));
+        return -errno;
+    }
+    if (req.count < mBufferCount) {
+        ALOGE("startStreaming: got %d buffers, need %d", req.count, mBufferCount);
+        return -ENOMEM;
+    }
 
     for (int i = 0; i < mBufferCount; i++) {
         struct v4l2_buffer buf;
@@ -287,6 +298,11 @@ int CameraPipeline::startStreaming() {
     enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     if (ioctl(mFd, VIDIOC_STREAMON, &type) < 0) return -errno;
 
+    /* Set initial exposure/gain AFTER streaming starts (sensor must be powered) */
+    setExposure(mCurrentExposure);
+    setGain(mCurrentGain);
+    ALOGI("Initial exposure=%d gain=%d", mCurrentExposure, mCurrentGain);
+
     mStreaming = true;
     mState = PIPELINE_STREAMING;
     return 0;
@@ -297,6 +313,14 @@ int CameraPipeline::stopStreaming() {
 
     enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     ioctl(mFd, VIDIOC_STREAMOFF, &type);
+
+    /* Release kernel buffer allocations for clean restart */
+    struct v4l2_requestbuffers req;
+    memset(&req, 0, sizeof(req));
+    req.count = 0;
+    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.memory = V4L2_MEMORY_USERPTR;
+    ioctl(mFd, VIDIOC_REQBUFS, &req);
 
     mStreaming = false;
     mState = PIPELINE_OPENED;
@@ -331,14 +355,20 @@ void CameraPipeline::doAutoExposure(const uint8_t* rgbBuffer) {
     int newExp = (int)(mCurrentExposure * ratio);
     int newGain = mCurrentGain;
 
+    /* Prefer longer exposure over higher gain to reduce noise */
     if (newExp > 2490) {
         newGain = (int)(mCurrentGain * (newExp / 2490.0f));
         newExp = 2490;
+    } else if (newGain > 150 && newExp < 2490) {
+        /* If gain is high, increase exposure instead */
+        newExp = (int)(newExp * (newGain / 150.0f));
+        newGain = 150;
+        if (newExp > 2490) newExp = 2490;
     }
     if (newExp < 10) {
         newExp = 10;
     }
-    if (newGain > 250) newGain = 250;
+    if (newGain > 150) newGain = 150;
     if (newGain < 1) newGain = 1;
 
     if (newExp != mCurrentExposure || newGain != mCurrentGain) {
@@ -427,8 +457,8 @@ int CameraPipeline::captureFrame(uint8_t* outputBuffer, uint32_t outputFormat) {
     pfd.events = POLLIN;
     pfd.revents = 0;
 
-    int poll_timeout_ms = 200;
-    int max_retries = 2;
+    int poll_timeout_ms = 300;
+    int max_retries = 6;
     int retry_count = 0;
     int pollRet = 0;
 
