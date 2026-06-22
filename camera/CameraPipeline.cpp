@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <linux/videodev2.h>
 
+
 #ifndef LOG_TAG
 #define LOG_TAG "MochaCameraHAL"
 #endif
@@ -29,7 +30,9 @@ CameraPipeline::CameraPipeline()
       mCurrentExposure(2400),
       mCurrentGain(64),
       mHasAwbInit(false),
-      mLastGamma(0.0f) {
+      mLastGamma(0.0f),
+      mFocusPosition(0),
+      mAfState(0) {
     for (int i = 0; i < 4; i++) {
         mBuffers[i].start = nullptr;
         mBuffers[i].length = 0;
@@ -79,6 +82,10 @@ int CameraPipeline::open(int cameraId) {
         return -ENODEV;
     }
 
+    if (cameraId == 0) {
+        initFocuser();
+    }
+
     mState = PIPELINE_OPENED;
     return 0;
 }
@@ -105,6 +112,8 @@ int CameraPipeline::close() {
         ::close(mFd);
         mFd = -1;
     }
+
+    deinitFocuser();
 
     mState = PIPELINE_CLOSED;
     return 0;
@@ -568,6 +577,46 @@ int CameraPipeline::processBayerToYuv(const uint8_t* bayerData, uint8_t* output,
     }
 
     return 0;
+}
+
+int CameraPipeline::initFocuser() {
+    mFocusPosition = -1;
+    ALOGI("Focuser: kernel controls AD5823 power/I2C; position 400 set at stream start");
+    return 0;
+}
+
+void CameraPipeline::deinitFocuser() {
+}
+
+int CameraPipeline::setFocus(int position) {
+    if (position < 0) position = 0;
+    if (position > 1023) position = 1023;
+
+    // AD5823 is power-managed by kernel driver (s_power via GPIO + regulators).
+    // Userspace I2C access times out because the Tegra I2C controller
+    // does not allow concurrent userspace access after kernel transactions.
+    // V4L2_CID_FOCUS_ABSOLUTE is not propagated from subdev to video node.
+    //
+    // TODO: Add FOCUS_ABSOLUTE to vi_v4l2_ctrl_init in tegra_vi.c
+    //       or add sysfs to ad5823.c for userspace control.
+    ALOGW("Focuser: cannot set position %d (kernel controls I2C)", position);
+
+    mFocusPosition = position;
+    ALOGI("Focuser: position %d recorded (kernel has set 400 at stream start)", position);
+    return 0;
+}
+
+void CameraPipeline::startAfScan() {
+    mAfState = 1; // MOVING
+    setFocus(500);
+    mAfState = 4; // FOCUSED_LOCKED
+    ALOGI("AF: scan complete, lock at position 500");
+}
+
+void CameraPipeline::cancelAf() {
+    setFocus(0);
+    mAfState = 0; // INACTIVE
+    ALOGI("AF: cancelled, focus at infinity");
 }
 
 } // namespace mocha

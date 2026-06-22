@@ -4,7 +4,10 @@
 #include <cstdint>
 #include <memory>
 
+
+
 #include <system/graphics.h>
+
 #include "isp/DemosaicNEON.h"
 #include "isp/ColorConvNEON.h"
 
@@ -61,6 +64,16 @@ public:
     int getExposure();
     int getGain();
 
+    int setFocus(int position);
+    int getFocusPosition() const { return mFocusPosition; }
+    int getAfState() const { return mAfState; }
+    void startAfScan();
+    void cancelAf();
+
+private:
+    int initFocuser();
+    void deinitFocuser();
+
 private:
     int processBayerToYuv(const uint8_t* bayerData, uint8_t* output, uint32_t outputFormat);
     void doAutoExposure(const uint8_t* rgbBuffer);
@@ -89,6 +102,9 @@ private:
     bool mHasAwbInit;
     uint8_t mGammaLut[256];
     float mLastGamma;
+
+    int mFocusPosition;
+    int mAfState;
 };
 
 } // namespace mocha

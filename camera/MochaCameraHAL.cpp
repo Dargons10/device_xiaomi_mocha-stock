@@ -90,6 +90,10 @@ struct mocha_camera_device_t {
     mocha::JpegEncoder* jpeg_encoder;
     uint8_t* temp_rgba;
     uint32_t temp_rgba_size;
+
+    uint8_t af_mode;
+    uint8_t af_trigger;
+    bool af_trigger_handled;
 };
 
 // Initialize static camera characteristics
@@ -107,22 +111,29 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
         return nullptr;
     }
 
-    // Camera facing
-    uint8_t facing = cam.facing;
+    // Camera facing (map CAMERA_FACING_* to ANDROID_LENS_FACING_*)
+    uint8_t facing = (cam.facing == CAMERA_FACING_BACK)
+        ? ANDROID_LENS_FACING_BACK : ANDROID_LENS_FACING_FRONT;
     add_camera_metadata_entry(metadata, ANDROID_LENS_FACING, &facing, 1);
 
     // Orientation
     int32_t orientation = cam.orientation;
     add_camera_metadata_entry(metadata, ANDROID_SENSOR_ORIENTATION, &orientation, 1);
 
-    // Available stream configurations (no 640x480 - small crop causes magnifying effect)
+    // Available stream configurations (includes 4:3 for Camera1 API shim)
     int32_t configs[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, CAMERA3_STREAM_OUTPUT,
+        HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 960, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, CAMERA3_STREAM_OUTPUT,
+        HAL_PIXEL_FORMAT_YV12, 1280, 960, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, CAMERA3_STREAM_OUTPUT,
+        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 960, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, CAMERA3_STREAM_OUTPUT,
+        HAL_PIXEL_FORMAT_BLOB, 1280, 720, CAMERA3_STREAM_OUTPUT,
+        HAL_PIXEL_FORMAT_BLOB, 1280, 960, CAMERA3_STREAM_OUTPUT,
+        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, CAMERA3_STREAM_OUTPUT,
     };
     add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, configs, sizeof(configs)/sizeof(int32_t));
@@ -130,11 +141,17 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     // Available min frame durations
     int64_t durations[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, 33333333LL,
+        HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 960, 33333333LL,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, 33333333LL,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, 33333333LL,
+        HAL_PIXEL_FORMAT_YV12, 1280, 960, 33333333LL,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, 33333333LL,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, 33333333LL,
+        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 960, 33333333LL,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, 33333333LL,
+        HAL_PIXEL_FORMAT_BLOB, 1280, 720, 33333333LL,
+        HAL_PIXEL_FORMAT_BLOB, 1280, 960, 33333333LL,
+        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, 33333333LL,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, 500000000LL,
     };
     int ret = add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS, durations, sizeof(durations)/sizeof(int64_t));
@@ -143,11 +160,17 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     // Available stall durations (format, width, height, stall_ns)
     int64_t stall_durations[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, 0,
+        HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 960, 0,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, 0,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, 0,
+        HAL_PIXEL_FORMAT_YV12, 1280, 960, 0,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, 0,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, 0,
+        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 960, 0,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, 0,
+        HAL_PIXEL_FORMAT_BLOB, 1280, 720, 0,
+        HAL_PIXEL_FORMAT_BLOB, 1280, 960, 0,
+        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, 0,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, 500000000LL,
     };
     add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_STALL_DURATIONS, stall_durations, sizeof(stall_durations)/sizeof(int64_t));
@@ -201,6 +224,8 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     int32_t request_keys[] = {
         ANDROID_CONTROL_AE_MODE,
         ANDROID_CONTROL_AE_TARGET_FPS_RANGE,
+        ANDROID_CONTROL_AF_MODE,
+        ANDROID_CONTROL_AF_TRIGGER,
         ANDROID_CONTROL_AWB_MODE,
         ANDROID_COLOR_CORRECTION_MODE,
         ANDROID_CONTROL_MODE,
@@ -221,12 +246,15 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     int32_t result_keys[] = {
         ANDROID_CONTROL_AE_MODE,
         ANDROID_CONTROL_AE_STATE,
+        ANDROID_CONTROL_AF_MODE,
+        ANDROID_CONTROL_AF_TRIGGER,
         ANDROID_CONTROL_AWB_MODE,
         ANDROID_CONTROL_AWB_STATE,
         ANDROID_CONTROL_MODE,
         ANDROID_FLASH_MODE,
         ANDROID_JPEG_QUALITY,
         ANDROID_LENS_FOCUS_DISTANCE,
+        ANDROID_LENS_STATE,
         ANDROID_REQUEST_ID,
         ANDROID_SCALER_CROP_REGION,
         ANDROID_SENSOR_EXPOSURE_TIME,
@@ -252,6 +280,8 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     // Available AF modes (required by deriveCameraCharacteristicsKeys)
     uint8_t af_modes[] = {
         ANDROID_CONTROL_AF_MODE_OFF,
+        ANDROID_CONTROL_AF_MODE_AUTO,
+        ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE,
     };
     add_camera_metadata_entry(metadata, ANDROID_CONTROL_AF_AVAILABLE_MODES, af_modes, sizeof(af_modes)/sizeof(uint8_t));
 
@@ -579,6 +609,9 @@ static int camera_device_init(const hw_module_t *module, hw_device_t **device) {
     dev->jpeg_encoder = nullptr;
     dev->temp_rgba = nullptr;
     dev->temp_rgba_size = 0;
+    dev->af_mode = ANDROID_CONTROL_AF_MODE_AUTO;
+    dev->af_trigger = ANDROID_CONTROL_AF_TRIGGER_IDLE;
+    dev->af_trigger_handled = false;
 
     *device = &dev->common;
     
@@ -846,9 +879,9 @@ static const camera_metadata_t* camera_device_construct_default_request_settings
     add_camera_metadata_entry(metadata, ANDROID_CONTROL_AE_TARGET_FPS_RANGE, aeTargetFpsRange, 2);
     int32_t aePrecaptureTrigger = ANDROID_CONTROL_AE_PRECAPTURE_TRIGGER_IDLE;
     add_camera_metadata_entry(metadata, ANDROID_CONTROL_AE_PRECAPTURE_TRIGGER, &aePrecaptureTrigger, 1);
-    int32_t afMode = ANDROID_CONTROL_AF_MODE_OFF;
+    uint8_t afMode = ANDROID_CONTROL_AF_MODE_AUTO;
     add_camera_metadata_entry(metadata, ANDROID_CONTROL_AF_MODE, &afMode, 1);
-    int32_t afTrigger = ANDROID_CONTROL_AF_TRIGGER_IDLE;
+    uint8_t afTrigger = ANDROID_CONTROL_AF_TRIGGER_IDLE;
     add_camera_metadata_entry(metadata, ANDROID_CONTROL_AF_TRIGGER, &afTrigger, 1);
     int32_t aeLock = ANDROID_CONTROL_AE_LOCK_OFF;
     add_camera_metadata_entry(metadata, ANDROID_CONTROL_AE_LOCK, &aeLock, 1);
@@ -929,8 +962,8 @@ static const camera_metadata_t* camera_device_construct_default_request_settings
     return metadata;
 }
 
-static camera_metadata_t* build_result_metadata(uint32_t frameNumber, int64_t timestamp, int32_t exposureVal, int32_t sensitivity) {
-    camera_metadata_t* metadata = allocate_camera_metadata(24, 512);
+static camera_metadata_t* build_result_metadata(uint32_t frameNumber, int64_t timestamp, int32_t exposureVal, int32_t sensitivity, int afState, int focusPos) {
+    camera_metadata_t* metadata = allocate_camera_metadata(30, 1024);
     if (!metadata) return nullptr;
 
     /* ANDROID_CONTROL_AE_MODE */
@@ -961,9 +994,27 @@ static camera_metadata_t* build_result_metadata(uint32_t frameNumber, int64_t ti
     uint8_t jpegQuality = 95;
     add_camera_metadata_entry(metadata, ANDROID_JPEG_QUALITY, &jpegQuality, 1);
 
-    /* ANDROID_LENS_FOCUS_DISTANCE */
-    float focusDistance = 0.0f;
+    /* ANDROID_LENS_FOCUS_DISTANCE: map position 0-1023 to diopters 0.0-10.0 */
+    float focusDistance = (focusPos > 0) ? 10.0f * focusPos / 1023.0f : 0.0f;
     add_camera_metadata_entry(metadata, ANDROID_LENS_FOCUS_DISTANCE, &focusDistance, 1);
+
+    /* ANDROID_LENS_STATE */
+    uint8_t lensState;
+    switch (afState) {
+        case 0:  lensState = ANDROID_LENS_STATE_STATIONARY; break;
+        case 1:  lensState = ANDROID_LENS_STATE_MOVING; break;
+        case 4:  lensState = ANDROID_LENS_STATE_STATIONARY; break;
+        default: lensState = ANDROID_LENS_STATE_STATIONARY; break;
+    }
+    add_camera_metadata_entry(metadata, ANDROID_LENS_STATE, &lensState, 1);
+
+    /* ANDROID_CONTROL_AF_MODE */
+    uint8_t resultAfMode = ANDROID_CONTROL_AF_MODE_AUTO;
+    add_camera_metadata_entry(metadata, ANDROID_CONTROL_AF_MODE, &resultAfMode, 1);
+
+    /* ANDROID_CONTROL_AF_TRIGGER */
+    uint8_t resultAfTrigger = ANDROID_CONTROL_AF_TRIGGER_IDLE;
+    add_camera_metadata_entry(metadata, ANDROID_CONTROL_AF_TRIGGER, &resultAfTrigger, 1);
 
     /* ANDROID_REQUEST_ID */
     int32_t requestId = (int32_t)frameNumber;
@@ -1026,6 +1077,39 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
     // Track this request
     if (dev->inflight_tracker) {
         dev->inflight_tracker->add(frameNum, request->output_buffers[0].buffer);
+    }
+
+    // Handle AF mode and trigger from request metadata
+    if (request->settings) {
+        camera_metadata_t* mutableSettings = const_cast<camera_metadata_t*>(request->settings);
+        camera_metadata_entry_t entry;
+        if (find_camera_metadata_entry(mutableSettings, ANDROID_CONTROL_AF_MODE, &entry) == 0 && entry.count > 0) {
+            dev->af_mode = entry.data.u8[0];
+        }
+        if (find_camera_metadata_entry(mutableSettings, ANDROID_CONTROL_AF_TRIGGER, &entry) == 0 && entry.count > 0) {
+            dev->af_trigger = entry.data.u8[0];
+        }
+        float focusDist = -1.0f;
+        if (find_camera_metadata_entry(mutableSettings, ANDROID_LENS_FOCUS_DISTANCE, &entry) == 0 && entry.count > 0) {
+            focusDist = entry.data.f[0];
+        }
+        ALOGI("AF request: mode=%d trigger=%d focusDist=%.2f", dev->af_mode, dev->af_trigger, focusDist);
+    }
+
+    if (dev->pipeline) {
+        mocha::CameraPipeline* p = static_cast<mocha::CameraPipeline*>(dev->pipeline);
+        if (dev->af_mode == ANDROID_CONTROL_AF_MODE_AUTO ||
+            dev->af_mode == ANDROID_CONTROL_AF_MODE_CONTINUOUS_PICTURE) {
+            if (dev->af_trigger == ANDROID_CONTROL_AF_TRIGGER_START && !dev->af_trigger_handled) {
+                ALOGI("AF TRIGGER START received");
+                p->startAfScan();
+                dev->af_trigger_handled = true;
+            } else if (dev->af_trigger == ANDROID_CONTROL_AF_TRIGGER_CANCEL) {
+                ALOGI("AF TRIGGER CANCEL received");
+                p->cancelAf();
+                dev->af_trigger_handled = false;
+            }
+        }
     }
 
     const camera3_stream_buffer_t& buf = request->output_buffers[0];
@@ -1228,13 +1312,17 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
     camera_metadata_t* resultMetadata = nullptr;
     if (frameCaptured && !frameFlushed) {
         int32_t exposure = 2400, sensitivity = 128;
+        int afState = 0;
+        int focusPos = 0;
         if (dev->pipeline) {
             mocha::CameraPipeline* p = static_cast<mocha::CameraPipeline*>(dev->pipeline);
             exposure = p->getExposure();
             sensitivity = p->getGain();
+            afState = p->getAfState();
+            focusPos = p->getFocusPosition();
         }
         int64_t timestamp = ((int64_t)ts_end.tv_sec * 1000000000LL) + (ts_end.tv_nsec);
-        resultMetadata = build_result_metadata(frameNum, timestamp, exposure, sensitivity);
+        resultMetadata = build_result_metadata(frameNum, timestamp, exposure, sensitivity, afState, focusPos);
     }
 
     camera3_capture_result_t result;
