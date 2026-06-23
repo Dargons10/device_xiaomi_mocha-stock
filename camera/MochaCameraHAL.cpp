@@ -758,7 +758,7 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
     pipelineConfig.bayerPattern = 3;  // RGGB = SRGGB10 correcto
     pipelineConfig.offset_x = 0;
     pipelineConfig.offset_y = 0;
-    pipelineConfig.flipV = (dev->camera_id == 0);  // IMX179 mounted upside down
+    pipelineConfig.flipV = false;  // Sensor rotated 90°; framework handles via ANDROID_SENSOR_ORIENTATION
 
     pipelineConfig.enableISP = true;
 
