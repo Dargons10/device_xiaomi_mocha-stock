@@ -592,23 +592,25 @@ int CameraPipeline::setFocus(int position) {
     if (position < 0) position = 0;
     if (position > 1023) position = 1023;
 
-    // AD5823 is power-managed by kernel driver (s_power via GPIO + regulators).
-    // Userspace I2C access times out because the Tegra I2C controller
-    // does not allow concurrent userspace access after kernel transactions.
-    // V4L2_CID_FOCUS_ABSOLUTE is not propagated from subdev to video node.
-    //
-    // TODO: Add FOCUS_ABSOLUTE to vi_v4l2_ctrl_init in tegra_vi.c
-    //       or add sysfs to ad5823.c for userspace control.
-    ALOGW("Focuser: cannot set position %d (kernel controls I2C)", position);
+    struct v4l2_control ctrl;
+    ctrl.id = V4L2_CID_FOCUS_ABSOLUTE;
+    ctrl.value = position;
 
-    mFocusPosition = position;
-    ALOGI("Focuser: position %d recorded (kernel has set 400 at stream start)", position);
-    return 0;
+    int ret = ioctl(mFd, VIDIOC_S_CTRL, &ctrl);
+    if (ret == 0) {
+        mFocusPosition = position;
+        ALOGI("Focuser: set position %d via V4L2", position);
+    } else {
+        ALOGW("Focuser: ioctl V4L2_CID_FOCUS_ABSOLUTE=%d failed: %s",
+              position, strerror(errno));
+    }
+    return ret;
 }
 
 void CameraPipeline::startAfScan() {
     mAfState = 1; // MOVING
     setFocus(500);
+    usleep(30000); // Wait for VCM to settle (~30ms)
     mAfState = 4; // FOCUSED_LOCKED
     ALOGI("AF: scan complete, lock at position 500");
 }
