@@ -551,7 +551,7 @@ int CameraPipeline::processBayerToYuv(const uint8_t* bayerData, uint8_t* output,
         uint8_t* yPlane = output;
         uint8_t* uvPlane = output + mConfig.width * mConfig.height;
         mColorConv->rgbToNv12(mRgbBuffer, yPlane, uvPlane);
-    } else if (outputFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
+    } else if (outputFormat == HAL_PIXEL_FORMAT_RGBA_8888 || outputFormat == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
         /* Merged WB + gamma + RGB→RGBA + flip in one pass */
         mColorConv->rgbToRgbaWbGamma(mRgbBuffer, output,
                                      mConfig.width, mConfig.height,
