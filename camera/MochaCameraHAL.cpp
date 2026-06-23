@@ -120,20 +120,14 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     int32_t orientation = cam.orientation;
     add_camera_metadata_entry(metadata, ANDROID_SENSOR_ORIENTATION, &orientation, 1);
 
-    // Available stream configurations (includes 4:3 for Camera1 API shim)
+    // Available stream configurations (no 640x480 - small crop causes magnifying effect)
     int32_t configs[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, CAMERA3_STREAM_OUTPUT,
-        HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 960, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, CAMERA3_STREAM_OUTPUT,
-        HAL_PIXEL_FORMAT_YV12, 1280, 960, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, CAMERA3_STREAM_OUTPUT,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 960, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, CAMERA3_STREAM_OUTPUT,
-        HAL_PIXEL_FORMAT_BLOB, 1280, 720, CAMERA3_STREAM_OUTPUT,
-        HAL_PIXEL_FORMAT_BLOB, 1280, 960, CAMERA3_STREAM_OUTPUT,
-        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, CAMERA3_STREAM_OUTPUT,
     };
     add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, configs, sizeof(configs)/sizeof(int32_t));
@@ -141,17 +135,11 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     // Available min frame durations
     int64_t durations[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, 33333333LL,
-        HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 960, 33333333LL,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, 33333333LL,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, 33333333LL,
-        HAL_PIXEL_FORMAT_YV12, 1280, 960, 33333333LL,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, 33333333LL,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, 33333333LL,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 960, 33333333LL,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, 33333333LL,
-        HAL_PIXEL_FORMAT_BLOB, 1280, 720, 33333333LL,
-        HAL_PIXEL_FORMAT_BLOB, 1280, 960, 33333333LL,
-        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, 33333333LL,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, 500000000LL,
     };
     int ret = add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS, durations, sizeof(durations)/sizeof(int64_t));
@@ -160,17 +148,11 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     // Available stall durations (format, width, height, stall_ns)
     int64_t stall_durations[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, 0,
-        HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 960, 0,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, 0,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, 0,
-        HAL_PIXEL_FORMAT_YV12, 1280, 960, 0,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, 0,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, 0,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 960, 0,
         HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, 0,
-        HAL_PIXEL_FORMAT_BLOB, 1280, 720, 0,
-        HAL_PIXEL_FORMAT_BLOB, 1280, 960, 0,
-        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, 0,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, 500000000LL,
     };
     add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_STALL_DURATIONS, stall_durations, sizeof(stall_durations)/sizeof(int64_t));
