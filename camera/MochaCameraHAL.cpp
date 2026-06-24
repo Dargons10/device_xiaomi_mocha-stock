@@ -120,16 +120,13 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     int32_t orientation = cam.orientation;
     add_camera_metadata_entry(metadata, ANDROID_SENSOR_ORIENTATION, &orientation, 1);
 
-    // Available stream configurations - report both YV12 and YCbCr_420_888
-    // for compatibility with Camera2 API apps (which use YUV_420_888).
-    // The actual HAL output buffer format is RGBA_8888 (IMPLEMENTATION_DEFINED).
+    // Available stream configurations - NO YCbCr_420_888 (Tegra gralloc can't handle it for camera2)
+    // camera2 API will use IMPLEMENTATION_DEFINED (maps to RGBA_8888) instead.
     int32_t configs[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, CAMERA3_STREAM_OUTPUT,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, CAMERA3_STREAM_OUTPUT,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_BLOB, 1280, 720, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_BLOB, 1920, 1080, CAMERA3_STREAM_OUTPUT,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, CAMERA3_STREAM_OUTPUT,
@@ -137,34 +134,26 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, configs, sizeof(configs)/sizeof(int32_t));
 
     // Available min frame durations
-    // BLOB (JPEG) is reported with 30fps frame duration so the framework doesn't
-    // classify it as "high-res" format. Previously 500000000ns (2fps) caused
-    // getOutputSizes(JPEG) to return null in apps that need JPEG captures.
     int64_t durations[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, 33333333LL,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, 33333333LL,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, 33333333LL,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, 33333333LL,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, 33333333LL,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, 33333333LL,
-        HAL_PIXEL_FORMAT_BLOB, 1280, 720, 33333333LL,
-        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, 33333333LL,
+        HAL_PIXEL_FORMAT_BLOB, 1280, 720, 500000000LL,
+        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, 500000000LL,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, 500000000LL,
     };
     int ret = add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS, durations, sizeof(durations)/sizeof(int64_t));
     ALOGI("DEBUG: Added min frame durations, ret=%d", ret);
 
     // Available stall durations (format, width, height, stall_ns)
-    // For BLOB/JPEG, stall is the time the pipeline stalls while encoding JPEG.
     int64_t stall_durations[] = {
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1280, 720, 0,
         HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED, 1920, 1080, 0,
         HAL_PIXEL_FORMAT_YV12, 1280, 720, 0,
         HAL_PIXEL_FORMAT_YV12, 1920, 1080, 0,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1280, 720, 0,
-        HAL_PIXEL_FORMAT_YCbCr_420_888, 1920, 1080, 0,
-        HAL_PIXEL_FORMAT_BLOB, 1280, 720, 33333333LL,
-        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, 66666666LL,
+        HAL_PIXEL_FORMAT_BLOB, 1280, 720, 500000000LL,
+        HAL_PIXEL_FORMAT_BLOB, 1920, 1080, 500000000LL,
         HAL_PIXEL_FORMAT_BLOB, 3280, 2464, 500000000LL,
     };
     add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_STALL_DURATIONS, stall_durations, sizeof(stall_durations)/sizeof(int64_t));
