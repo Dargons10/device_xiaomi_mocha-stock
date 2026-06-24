@@ -1,0 +1,13 @@
+diff --git a/services/camera/libcameraservice/CameraService.cpp b/services/camera/libcameraservice/CameraService.cpp
+index 3755d55cd..c9fac81c2 100644
+--- a/services/camera/libcameraservice/CameraService.cpp
++++ b/services/camera/libcameraservice/CameraService.cpp
+@@ -2328,7 +2328,7 @@ void CameraService::Client::OpsCallback::opChanged(int32_t op,
+
+ CameraService::CameraState::CameraState(const String8& id, int cost,
+         const std::set<String8>& conflicting) : mId(id),
+-        mStatus(StatusInternal::PRESENT), mCost(cost), mConflicting(conflicting) {}
++        mStatus(StatusInternal::NOT_PRESENT), mCost(cost), mConflicting(conflicting) {}
+
+ CameraService::CameraState::~CameraState() {}
+
