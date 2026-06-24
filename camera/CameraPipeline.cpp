@@ -197,9 +197,10 @@ int CameraPipeline::configure(const PipelineConfig& config) {
         return -errno;
     }
 
-    ALOGI("VIDIOC_S_FMT: got %dx%d fmt=0x%x sizeimage=%d",
+    ALOGI("VIDIOC_S_FMT: got %dx%d fmt=0x%x sizeimage=%d bytesperline=%d",
           fmt.fmt.pix.width, fmt.fmt.pix.height,
-          fmt.fmt.pix.pixelformat, fmt.fmt.pix.sizeimage);
+          fmt.fmt.pix.pixelformat, fmt.fmt.pix.sizeimage,
+          fmt.fmt.pix.bytesperline);
 
     struct v4l2_requestbuffers req;
     memset(&req, 0, sizeof(req));
@@ -607,12 +608,183 @@ int CameraPipeline::setFocus(int position) {
     return ret;
 }
 
+/*
+ * Horizontal Sobel energy on the green channel of an RGB buffer.
+ * Uses 3×3 Sobel kernel for horizontal edges:
+ *   Gx = | -1 0 +1 |
+ *        | -2 0 +2 |
+ *        | -1 0 +1 |
+ * Only green channel (byte-offset 1) is used — fast approximation.
+ */
+int CameraPipeline::sobelEnergy(const uint8_t* rgb, int w, int h) const {
+    if (!rgb || w < 3 || h < 3) return 0;
+    int total = 0;
+    int stride = w * 3;
+    for (int y = 1; y < h - 1; y++) {
+        const uint8_t* row = rgb + y * stride;
+        for (int x = 1; x < w - 1; x++) {
+            int g = abs((int)row[(x+1)*3+1] - (int)row[(x-1)*3+1]); // horizontal gradient
+            total += g;
+        }
+    }
+    return total;
+}
+
+/*
+ * 8-pixel-wide horizontal sobel using green channel.
+ * Processes 8 adjacent output pixels at a time, summing partial gradients.
+ * Same algorithm as sobelEnergy() but loop-unrolled for 8x regions.
+ */
+int CameraPipeline::sobelEnergyNw(const uint8_t* rgb, int w, int h) const {
+    if (!rgb || w < 3 || h < 3) return 0;
+    int total = 0;
+    int stride = w * 3;
+    int x = 1;
+    /* Process 8-wide chunks */
+    for (int y = 1; y < h - 1; y++) {
+        const uint8_t* row = rgb + y * stride;
+        x = 1;
+        while (x + 8 < w - 1) {
+            int g0 = abs((int)row[(x+1)*3+1] - (int)row[(x-1)*3+1]);
+            int g1 = abs((int)row[(x+2)*3+1] - (int)row[(x+0)*3+1]);
+            int g2 = abs((int)row[(x+3)*3+1] - (int)row[(x+1)*3+1]);
+            int g3 = abs((int)row[(x+4)*3+1] - (int)row[(x+2)*3+1]);
+            int g4 = abs((int)row[(x+5)*3+1] - (int)row[(x+3)*3+1]);
+            int g5 = abs((int)row[(x+6)*3+1] - (int)row[(x+4)*3+1]);
+            int g6 = abs((int)row[(x+7)*3+1] - (int)row[(x+5)*3+1]);
+            int g7 = abs((int)row[(x+8)*3+1] - (int)row[(x+6)*3+1]);
+            total += g0 + g1 + g2 + g3 + g4 + g5 + g6 + g7;
+            x += 8;
+        }
+        /* Remainder */
+        for (; x < w - 1; x++) {
+            total += abs((int)row[(x+1)*3+1] - (int)row[(x-1)*3+1]);
+        }
+    }
+    return total;
+}
+
+/*
+ * Capture one V4L2 frame and return Sobel energy from the green channel.
+ * Used during AF sweep — captures a frame, demosaics to RGB, measures contrast.
+ */
+int CameraPipeline::captureForAf() {
+    if (mState != PIPELINE_STREAMING) return -EINVAL;
+
+    struct pollfd pfd;
+    pfd.fd = mFd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+
+    int pollRet = poll(&pfd, 1, 500);
+    if (pollRet <= 0) return -EAGAIN;
+    if (!(pfd.revents & POLLIN)) return -EAGAIN;
+
+    struct v4l2_buffer buf;
+    memset(&buf, 0, sizeof(buf));
+    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    buf.memory = V4L2_MEMORY_USERPTR;
+
+    int ret = ioctl(mFd, VIDIOC_DQBUF, &buf);
+    if (ret < 0) return -errno;
+    if (buf.index >= mBufferCount) return -EINVAL;
+
+    uint8_t* frameBuffer = (uint8_t*)mBuffers[buf.index].start;
+    int energy = 0;
+
+    if (mConfig.enableISP && mDemosaic && mColorConv) {
+        /* Demosaic to mRgbBuffer */
+        mDemosaic->process(frameBuffer, mRgbBuffer);
+        /* Apply AE — doAutoExposure reads green from mRgbBuffer */
+        if (mConfig.enableAE)
+            doAutoExposure(mRgbBuffer);
+        /* Apply AWB gains in-place */
+        if (mConfig.enableAWB) {
+            doAutoWhiteBalance(mRgbBuffer);
+        }
+        float rG = mConfig.enableAWB ? mAwbGains[0] : mConfig.wbGain[0];
+        float gG = mConfig.enableAWB ? mAwbGains[1] : mConfig.wbGain[1];
+        float bG = mConfig.enableAWB ? mAwbGains[2] : mConfig.wbGain[2];
+        int total = mConfig.width * mConfig.height;
+        for (int i = 0; i < total; i++) {
+            int off = i * 3;
+            int r = (int)(mRgbBuffer[off]   * rG);
+            int g = (int)(mRgbBuffer[off+1] * gG);
+            int b = (int)(mRgbBuffer[off+2] * bG);
+            mRgbBuffer[off]   = r > 255 ? 255 : (uint8_t)r;
+            mRgbBuffer[off+1] = g > 255 ? 255 : (uint8_t)g;
+            mRgbBuffer[off+2] = b > 255 ? 255 : (uint8_t)b;
+        }
+        applyGamma(mRgbBuffer, mConfig.width, mConfig.height, mConfig.gamma);
+
+        /* Measure Sobel energy on the green channel */
+        energy = sobelEnergyNw(mRgbBuffer, mConfig.width, mConfig.height);
+    }
+
+    /* Return buffer to queue */
+    buf.m.userptr = (unsigned long)mBuffers[buf.index].start;
+    buf.length = mBuffers[buf.index].length;
+    if (ioctl(mFd, VIDIOC_QBUF, &buf) < 0) return -errno;
+
+    return energy;
+}
+
 void CameraPipeline::startAfScan() {
+    if (mState != PIPELINE_STREAMING) {
+        ALOGW("AF: cannot scan, not streaming");
+        mAfState = 0;
+        return;
+    }
+
     mAfState = 1; // MOVING
-    setFocus(500);
-    usleep(30000); // Wait for VCM to settle (~30ms)
+    ALOGI("AF: starting contrast-detection scan");
+
+    int bestEnergy = 0;
+    int bestPos = 400;
+    const int coarseStep = 50;
+    const int fineStep = 10;
+    const int settleMs = 60;
+
+    /* ---- Coarse sweep: 140 → 640 ---- */
+    for (int pos = 140; pos <= 640; pos += coarseStep) {
+        setFocus(pos);
+        usleep(settleMs * 1000);
+        int energy = captureForAf();
+        if (energy < 0) {
+            ALOGW("AF: capture error at pos %d: %d", pos, energy);
+            continue;
+        }
+        ALOGI("AF: coarse pos=%d energy=%d", pos, energy);
+        if (energy > bestEnergy) {
+            bestEnergy = energy;
+            bestPos = pos;
+        }
+    }
+
+    /* ---- Fine sweep around best ---- */
+    int fineStart = bestPos - coarseStep;
+    if (fineStart < 140) fineStart = 140;
+    int fineEnd = bestPos + coarseStep;
+    if (fineEnd > 640) fineEnd = 640;
+
+    for (int pos = fineStart; pos <= fineEnd; pos += fineStep) {
+        if (pos == bestPos) continue; // already measured
+        setFocus(pos);
+        usleep(settleMs * 1000);
+        int energy = captureForAf();
+        if (energy < 0) continue;
+        ALOGI("AF: fine pos=%d energy=%d", pos, energy);
+        if (energy > bestEnergy) {
+            bestEnergy = energy;
+            bestPos = pos;
+        }
+    }
+
+    /* ---- Lock to best position ---- */
+    setFocus(bestPos);
+    usleep(settleMs * 1000);
     mAfState = 4; // FOCUSED_LOCKED
-    ALOGI("AF: scan complete, lock at position 500");
+    ALOGI("AF: scan complete, lock at position=%d energy=%d", bestPos, bestEnergy);
 }
 
 void CameraPipeline::cancelAf() {

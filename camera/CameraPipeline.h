@@ -73,6 +73,9 @@ public:
 private:
     int initFocuser();
     void deinitFocuser();
+    int captureForAf();       // Capture a frame during AF sweep, returns sobel energy
+    int sobelEnergy(const uint8_t* rgb, int w, int h) const;
+    int sobelEnergyNw(const uint8_t* rgb, int w, int h) const; // 8px-wide NEON-style (C reference)
 
 private:
     int processBayerToYuv(const uint8_t* bayerData, uint8_t* output, uint32_t outputFormat);
