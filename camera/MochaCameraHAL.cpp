@@ -165,7 +165,7 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     // Request max pipeline depth (removed - not available in 8.1)
     
     // Flash available
-    uint8_t flash_available = (cameraId == 0) ? 1 : 0;
+    uint8_t flash_available = 0;
     add_camera_metadata_entry(metadata, ANDROID_FLASH_INFO_AVAILABLE, &flash_available, 1);
 
     // Sensor info
@@ -657,10 +657,16 @@ static int camera_device_initialize(const camera3_device_t *device, const camera
 }
 
 static int camera_device_configure_streams(const camera3_device_t *device, camera3_stream_configuration_t *config) {
-    ALOGI("camera_device_configure_streams: num_streams=%d", config->num_streams);
-    
+    ALOGI("camera_device_configure_streams: num_streams=%d", config ? config->num_streams : -1);
+
     if (!device || !config) {
         ALOGE("Invalid parameters");
+        return -EINVAL;
+    }
+
+    // Validate num_streams to catch garbled HAL1→HAL3 fallback
+    if (config->num_streams == 0 || config->num_streams > 20) {
+        ALOGE("Invalid num_streams=%d, rejecting garbled config", config->num_streams);
         return -EINVAL;
     }
 
@@ -1471,17 +1477,20 @@ static int open_legacy(const hw_module_t* module, const char* id, uint32_t halVe
         return -EINVAL;
     }
 
-    if (halVersion != CAMERA_DEVICE_API_VERSION_3_0 &&
-        halVersion != CAMERA_DEVICE_API_VERSION_3_1 &&
-        halVersion != CAMERA_DEVICE_API_VERSION_3_2) {
-        ALOGW("Camera HAL open_legacy: unsupported HAL version %u (we are HAL3 only)", halVersion);
-        return -ENOSYS;
+    // halVersion=256 = 0x100 = CAMERA_DEVICE_API_VERSION_1_0
+    // We reject HAL1 requests because we're HAL3-only.
+    // For HAL3 requests (>= 0x30000), accept any version 3.x+.
+    if (halVersion >= 0x30000) {
+        int cameraId = atoi(id);
+        int ret = mocha::MochaCameraHAL::openCamera(cameraId, device);
+        ALOGI("Camera HAL open_legacy: returning %d", ret);
+        return ret;
     }
 
-    int cameraId = atoi(id);
-    int ret = mocha::MochaCameraHAL::openCamera(cameraId, device);
-    ALOGI("Camera HAL open_legacy: returning %d", ret);
-    return ret;
+    // HAL1 request - must return ENOSYS so CameraProviderManager
+    // falls back to HAL3 detection via module version 2.4
+    ALOGW("Camera HAL open_legacy: unsupported HAL version %u (we are HAL3 only)", halVersion);
+    return -ENOSYS;
 }
 
 static int set_torch_mode(const char* camera_id, bool enabled) {
