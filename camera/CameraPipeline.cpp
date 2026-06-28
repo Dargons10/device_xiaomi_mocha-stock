@@ -27,8 +27,8 @@ CameraPipeline::CameraPipeline()
       mStreaming(false),
       mBufferCount(0),
       mCurrentBuffer(0),
-      mCurrentExposure(2400),
-      mCurrentGain(64),
+    mCurrentExposure(2400),
+    mCurrentGain(150),
       mHasAwbInit(false),
       mLastGamma(0.0f),
       mFocusPosition(0),
@@ -95,7 +95,7 @@ int CameraPipeline::close() {
 
     for (int i = 0; i < mBufferCount; i++) {
         if (mBuffers[i].start && mBuffers[i].allocated) {
-            free(mBuffers[i].start);
+            munmap(mBuffers[i].start, mBuffers[i].length);
             mBuffers[i].start = nullptr;
             mBuffers[i].allocated = false;
         }
@@ -202,11 +202,12 @@ int CameraPipeline::configure(const PipelineConfig& config) {
           fmt.fmt.pix.pixelformat, fmt.fmt.pix.sizeimage,
           fmt.fmt.pix.bytesperline);
 
+
     struct v4l2_requestbuffers req;
     memset(&req, 0, sizeof(req));
     req.count = 2;
     req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    req.memory = V4L2_MEMORY_USERPTR;
+    req.memory = V4L2_MEMORY_MMAP;
 
     if (ioctl(mFd, VIDIOC_REQBUFS, &req) < 0) {
         ALOGE("VIDIOC_REQBUFS failed: %s", strerror(errno));
@@ -221,13 +222,26 @@ int CameraPipeline::configure(const PipelineConfig& config) {
 
     uint32_t bufSize = fmt.fmt.pix.sizeimage;
     for (int i = 0; i < mBufferCount; i++) {
-        mBuffers[i].length = bufSize;
-        void* ptr = nullptr;
-        if (posix_memalign(&ptr, 4096, bufSize) != 0) ptr = nullptr;
-        mBuffers[i].start = ptr;
-        if (!mBuffers[i].start) {
+        struct v4l2_buffer qbuf;
+        memset(&qbuf, 0, sizeof(qbuf));
+        qbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        qbuf.memory = V4L2_MEMORY_MMAP;
+        qbuf.index = i;
+        if (ioctl(mFd, VIDIOC_QUERYBUF, &qbuf) < 0) {
             for (int j = 0; j < i; j++) {
-                free(mBuffers[j].start);
+                if (mBuffers[j].start) munmap(mBuffers[j].start, mBuffers[j].length);
+                mBuffers[j].start = nullptr;
+                mBuffers[j].allocated = false;
+            }
+            mBufferCount = 0;
+            return -errno;
+        }
+        mBuffers[i].length = qbuf.length;
+        mBuffers[i].start = mmap(NULL, qbuf.length, PROT_READ | PROT_WRITE, MAP_SHARED, mFd, qbuf.m.offset);
+        if (mBuffers[i].start == MAP_FAILED) {
+            mBuffers[i].start = nullptr;
+            for (int j = 0; j < i; j++) {
+                if (mBuffers[j].start) munmap(mBuffers[j].start, mBuffers[j].length);
                 mBuffers[j].start = nullptr;
                 mBuffers[j].allocated = false;
             }
@@ -235,7 +249,6 @@ int CameraPipeline::configure(const PipelineConfig& config) {
             return -ENOMEM;
         }
         mBuffers[i].allocated = true;
-        memset(mBuffers[i].start, 0, bufSize);
     }
 
     if (config.enableISP) {
@@ -279,28 +292,12 @@ int CameraPipeline::startStreaming() {
     if (mState != PIPELINE_OPENED) return -EINVAL;
 
     /* Re-request buffers (idempotent: reuses existing if count matches) */
-    struct v4l2_requestbuffers req;
-    memset(&req, 0, sizeof(req));
-    req.count = mBufferCount;
-    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    req.memory = V4L2_MEMORY_USERPTR;
-    if (ioctl(mFd, VIDIOC_REQBUFS, &req) < 0) {
-        ALOGE("startStreaming REQBUFS failed: %s", strerror(errno));
-        return -errno;
-    }
-    if (req.count < mBufferCount) {
-        ALOGE("startStreaming: got %d buffers, need %d", req.count, mBufferCount);
-        return -ENOMEM;
-    }
-
     for (int i = 0; i < mBufferCount; i++) {
         struct v4l2_buffer buf;
         memset(&buf, 0, sizeof(buf));
         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        buf.memory = V4L2_MEMORY_USERPTR;
+        buf.memory = V4L2_MEMORY_MMAP;
         buf.index = i;
-        buf.m.userptr = (unsigned long)mBuffers[i].start;
-        buf.length = mBuffers[i].length;
 
         if (ioctl(mFd, VIDIOC_QBUF, &buf) < 0) return -errno;
     }
@@ -324,13 +321,14 @@ int CameraPipeline::stopStreaming() {
     enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     ioctl(mFd, VIDIOC_STREAMOFF, &type);
 
-    /* Release kernel buffer allocations for clean restart */
-    struct v4l2_requestbuffers req;
-    memset(&req, 0, sizeof(req));
-    req.count = 0;
-    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    req.memory = V4L2_MEMORY_USERPTR;
-    ioctl(mFd, VIDIOC_REQBUFS, &req);
+    for (int i = 0; i < mBufferCount; i++) {
+        if (mBuffers[i].start) {
+            munmap(mBuffers[i].start, mBuffers[i].length);
+            mBuffers[i].start = nullptr;
+            mBuffers[i].allocated = false;
+        }
+    }
+    mBufferCount = 0;
 
     mStreaming = false;
     mState = PIPELINE_OPENED;
@@ -357,9 +355,7 @@ void CameraPipeline::doAutoExposure(const uint8_t* rgbBuffer) {
     float avgLuma = (float)sum / count / 255.0f;
     float target = mConfig.targetLuma;
 
-    if (avgLuma < 0.01f) return;
-
-    float ratio = target / avgLuma;
+    float ratio = target / (avgLuma > 0.001f ? avgLuma : 0.001f);
     ratio = (ratio < 0.5f) ? 0.5f : (ratio > 4.0f) ? 4.0f : ratio;
 
     int newExp = (int)(mCurrentExposure * ratio);
@@ -378,7 +374,7 @@ void CameraPipeline::doAutoExposure(const uint8_t* rgbBuffer) {
     if (newExp < 10) {
         newExp = 10;
     }
-    if (newGain > 150) newGain = 150;
+    if (newGain > 180) newGain = 180;
     if (newGain < 1) newGain = 1;
 
     if (newExp != mCurrentExposure || newGain != mCurrentGain) {
@@ -488,7 +484,7 @@ int CameraPipeline::captureFrame(uint8_t* outputBuffer, uint32_t outputFormat) {
     struct v4l2_buffer buf;
     memset(&buf, 0, sizeof(buf));
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    buf.memory = V4L2_MEMORY_USERPTR;
+    buf.memory = V4L2_MEMORY_MMAP;
 
     int ret = ioctl(mFd, VIDIOC_DQBUF, &buf);
     if (ret < 0) {
@@ -508,8 +504,6 @@ int CameraPipeline::captureFrame(uint8_t* outputBuffer, uint32_t outputFormat) {
         ret = 0;
     }
 
-    buf.m.userptr = (unsigned long)mBuffers[buf.index].start;
-    buf.length = mBuffers[buf.index].length;
     if (ioctl(mFd, VIDIOC_QBUF, &buf) < 0) return -errno;
 
     return ret;

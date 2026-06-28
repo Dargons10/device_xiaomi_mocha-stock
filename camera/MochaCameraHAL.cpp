@@ -782,14 +782,14 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
     /* DEBUG: Probando BGGR para IMX179 (commented code usaba BGGR(1,1) y daba colores).
        El sensor podría ser BGGR pese a que la V4L2 driver dice SRGGB.
        Usar identidad WB para ver línea base, luego ajustar. */
-    pipelineConfig.bayerPattern = 3;  // RGGB = SRGGB10 correcto
+    pipelineConfig.bayerPattern = 3;  // RGGB correcto
     pipelineConfig.offset_x = 0;
     pipelineConfig.offset_y = 0;
-    pipelineConfig.flipV = false;  // Sensor rotated 90°; framework handles via ANDROID_SENSOR_ORIENTATION
+    pipelineConfig.flipV = false;  // IMX179 mount normal; framework handles rotation
 
     pipelineConfig.enableISP = true;
 
-     pipelineConfig.blackLevel = 16;  // 64 >> 2 (IMX179 black level)
+     pipelineConfig.blackLevel = 0;  // DEBUG: temp zero to check pixel visibility
      pipelineConfig.wbGain[0] = 1.0f;  // R gain
      pipelineConfig.wbGain[1] = 1.0f;  // G gain
      pipelineConfig.wbGain[2] = 1.0f;  // B gain
@@ -804,7 +804,7 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
      pipelineConfig.enableAWB = true;  // corrige tinte verdoso
     pipelineConfig.targetLuma = 0.55f;
 
-    // Forzar RGBA_8888 para streams que no sean BLOB
+    // Forzar RGBA_8888 para streams que no sean BLOB ni YCbCr_420_888
     for (uint32_t i = 0; i < config->num_streams; i++) {
         camera3_stream_t *stream = config->streams[i];
         if (stream->stream_type == CAMERA3_STREAM_OUTPUT &&
@@ -1154,6 +1154,7 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
           buf.stream->width, buf.stream->height, buf.stream->format,
           dev->pipeline_width, dev->pipeline_height);
 
+ 
     bool frameCaptured = false;
 
     // Capture frame from pipeline
@@ -1238,13 +1239,12 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
                         ALOGE("Failed to capture frame for JPEG: %d", captureRet);
                     }
                 }
-            } else if (buf.stream->format == HAL_PIXEL_FORMAT_YCBCR_420_888 && grallocModule->lock_ycbcr) {
-                struct android_ycbcr ycbcr;
-                memset(&ycbcr, 0, sizeof(ycbcr));
-                int ret = grallocModule->lock_ycbcr(grallocModule, handle, GRALLOC_USAGE_SW_WRITE_OFTEN,
-                                                    0, 0, buf.stream->width, buf.stream->height, &ycbcr);
-                if (ret == 0 && ycbcr.y) {
-                    int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(ycbcr.y), buf.stream->format);
+            } else if (buf.stream->format == HAL_PIXEL_FORMAT_YCBCR_420_888) {
+                int usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
+                int ret = grallocModule->lock(grallocModule, handle, usage,
+                                              0, 0, buf.stream->width, buf.stream->height, &vaddr);
+                if (ret == 0 && vaddr) {
+                    int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(vaddr), buf.stream->format);
                     if (captureRet == 0) {
                         frameCaptured = true;
                     } else if (captureRet == -EAGAIN) {
