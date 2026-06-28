@@ -35,6 +35,7 @@ struct PipelineConfig {
     bool enableAE;
     bool enableAWB;
     float targetLuma;
+    float digitalGain;  // software brightness boost (multiplicative on RGB)
 };
 
 struct V4l2Buffer {

@@ -166,7 +166,6 @@ static camera_metadata_t* init_static_characteristics(int cameraId) {
     // Available processed sizes (for CameraWrapper synthesis of YUV_420_888)
     int32_t processed_sizes[] = {
         1280, 720,
-        1920, 1080,
     };
     add_camera_metadata_entry(metadata, ANDROID_SCALER_AVAILABLE_PROCESSED_SIZES, processed_sizes, sizeof(processed_sizes)/sizeof(int32_t));
 
@@ -692,9 +691,10 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
 
     mocha_camera_device_t *dev = (mocha_camera_device_t *)device;
 
-    // Find pipeline stream (first non-BLOB) and set max_buffers on all
+    // Find pipeline stream (prefer RGBA_8888, then IMPLEMENTATION_DEFINED, then any non-BLOB)
     camera3_stream_t* pipelineStream = nullptr;
     camera3_stream_t* outputStream = nullptr;
+    camera3_stream_t* rgbaStream = nullptr;
     for (uint32_t i = 0; i < config->num_streams; i++) {
         camera3_stream_t *stream = config->streams[i];
         ALOGI("Stream %d: type=%d, width=%d, height=%d, format=%d",
@@ -708,16 +708,23 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
         if (stream->stream_type == CAMERA3_STREAM_OUTPUT) {
             stream->max_buffers = 2;
             outputStream = stream;
-            if (!pipelineStream && stream->format != HAL_PIXEL_FORMAT_BLOB)
-                pipelineStream = stream;
+            if (!pipelineStream && stream->format != HAL_PIXEL_FORMAT_BLOB) {
+                // Prefer RGBA_8888 for pipeline to avoid YUV format issues
+                if (stream->format == HAL_PIXEL_FORMAT_RGBA_8888) {
+                    pipelineStream = stream;
+                    rgbaStream = stream;
+                } else if (!rgbaStream && stream->format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
+                    // IMPLEMENTATION_DEFINED will be overridden to RGBA_8888
+                    rgbaStream = stream;
+                } else if (!pipelineStream) {
+                    pipelineStream = stream;
+                }
+            }
         }
     }
-
-    if (!outputStream) {
-        ALOGE("No output stream configured");
-        return -EINVAL;
-    }
-    if (!pipelineStream) pipelineStream = outputStream;
+    
+    // If we found RGBA/IMPLEMENTATION_DEFINED, use that as pipeline stream
+    if (rgbaStream) pipelineStream = rgbaStream;
 
     // Early exit if same resolution - avoids costly STREAMOFF/STREAMON cycle
     if (dev->last_config_width == pipelineStream->width &&
@@ -803,12 +810,14 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
      pipelineConfig.enableAE = true;
      pipelineConfig.enableAWB = true;  // corrige tinte verdoso
     pipelineConfig.targetLuma = 0.55f;
-
-    // Forzar RGBA_8888 para streams que no sean BLOB ni YCbCr_420_888
+    pipelineConfig.digitalGain = 2.0f;  // software brightening for dim pixel values
+ 
+    // Override IMPLEMENTATION_DEFINED to RGBA_8888 (Tegra gralloc allocates
+    // RGBA for non-YUV formats). Keep YCbCr_420_888 and BLOB as-is.
     for (uint32_t i = 0; i < config->num_streams; i++) {
         camera3_stream_t *stream = config->streams[i];
         if (stream->stream_type == CAMERA3_STREAM_OUTPUT &&
-            stream->format != HAL_PIXEL_FORMAT_BLOB) {
+            stream->format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED) {
             stream->format = HAL_PIXEL_FORMAT_RGBA_8888;
         }
     }
@@ -1240,11 +1249,13 @@ static int camera_device_process_capture_request(const camera3_device_t *device,
                     }
                 }
             } else if (buf.stream->format == HAL_PIXEL_FORMAT_YCBCR_420_888) {
-                int usage = GRALLOC_USAGE_SW_WRITE_OFTEN;
-                int ret = grallocModule->lock(grallocModule, handle, usage,
-                                              0, 0, buf.stream->width, buf.stream->height, &vaddr);
-                if (ret == 0 && vaddr) {
-                    int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(vaddr), buf.stream->format);
+                struct android_ycbcr ycbcr;
+                memset(&ycbcr, 0, sizeof(ycbcr));
+                int ret = grallocModule->lock_ycbcr(grallocModule, handle,
+                                                   GRALLOC_USAGE_SW_WRITE_OFTEN,
+                                                   0, 0, buf.stream->width, buf.stream->height, &ycbcr);
+                if (ret == 0 && ycbcr.y) {
+                    int captureRet = pipeline->captureFrame(static_cast<uint8_t*>(ycbcr.y), buf.stream->format);
                     if (captureRet == 0) {
                         frameCaptured = true;
                     } else if (captureRet == -EAGAIN) {

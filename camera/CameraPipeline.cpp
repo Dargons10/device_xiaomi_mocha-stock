@@ -522,9 +522,9 @@ int CameraPipeline::processBayerToYuv(const uint8_t* bayerData, uint8_t* output,
     if (mConfig.enableAWB)
         doAutoWhiteBalance(mRgbBuffer);
 
-    float rG = mConfig.enableAWB ? mAwbGains[0] : mConfig.wbGain[0];
-    float gG = mConfig.enableAWB ? mAwbGains[1] : mConfig.wbGain[1];
-    float bG = mConfig.enableAWB ? mAwbGains[2] : mConfig.wbGain[2];
+    float rG = (mConfig.enableAWB ? mAwbGains[0] : mConfig.wbGain[0]) * mConfig.digitalGain;
+    float gG = (mConfig.enableAWB ? mAwbGains[1] : mConfig.wbGain[1]) * mConfig.digitalGain;
+    float bG = (mConfig.enableAWB ? mAwbGains[2] : mConfig.wbGain[2]) * mConfig.digitalGain;
 
     if (outputFormat == HAL_PIXEL_FORMAT_YCBCR_420_888) {
         /* For YUV: apply WB gains in-place first, then gamma, then convert */
