@@ -801,7 +801,7 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
      pipelineConfig.enableAE = true;
      pipelineConfig.enableAWB = true;  // corrige tinte verdoso
     pipelineConfig.targetLuma = 0.55f;
-    pipelineConfig.digitalGain = 2.0f;  // software brightening for dim pixel values
+    pipelineConfig.digitalGain = 6.0f;  // software brightening for dim pixel values
  
     // Override IMPLEMENTATION_DEFINED to RGBA_8888 (Tegra gralloc allocates
     // RGBA for non-YUV formats). Keep YCbCr_420_888 and BLOB as-is.
