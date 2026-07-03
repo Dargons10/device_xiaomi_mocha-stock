@@ -498,15 +498,8 @@ int CameraPipeline::captureFrame(uint8_t* outputBuffer, uint32_t outputFormat) {
     uint32_t frameSize = buf.bytesused;
 
     if (mConfig.enableISP && mDemosaic && mColorConv) {
-        ALOGI("CAPTURE_PATH: ISP path (enableISP=%d mDemosaic=%d mColorConv=%d)",
-              mConfig.enableISP, mDemosaic ? 1 : 0, mColorConv ? 1 : 0);
-        if (frameBuffer == outputBuffer) {
-            ALOGE("CAPTURE_PATH: BUFFER COLLISION! frameBuffer==outputBuffer==%p", frameBuffer);
-        }
         ret = processBayerToYuv(frameBuffer, outputBuffer, outputFormat);
     } else {
-        ALOGW("CAPTURE_PATH: RAW memcpy path (enableISP=%d mDemosaic=%d mColorConv=%d) frameSize=%d",
-              mConfig.enableISP, mDemosaic ? 1 : 0, mColorConv ? 1 : 0, frameSize);
         memcpy(outputBuffer, frameBuffer, frameSize);
         ret = 0;
     }
