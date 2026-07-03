@@ -727,6 +727,15 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
                   pipelineStream->width, pipelineStream->height);
             return 0;
         }
+        if (p->getState() == mocha::PIPELINE_OPENED) {
+            ALOGI("configureStreams: same %ux%u capture, just restart streaming",
+                  pipelineStream->width, pipelineStream->height);
+            int restartRet = p->startStreaming();
+            if (restartRet == 0) {
+                return 0;
+            }
+            ALOGW("configureStreams: restart streaming failed: %d, will reconfigure", restartRet);
+        }
         ALOGI("configureStreams: same resolution but pipeline not streaming, reconfiguring");
     }
 
@@ -801,7 +810,7 @@ static int camera_device_configure_streams(const camera3_device_t *device, camer
      pipelineConfig.enableAE = true;
      pipelineConfig.enableAWB = true;  // corrige tinte verdoso
     pipelineConfig.targetLuma = 0.55f;
-    pipelineConfig.digitalGain = 6.0f;  // software brightening for dim pixel values
+    pipelineConfig.digitalGain = 1.0f;  // test: disable to see if ISP works
  
     // Override IMPLEMENTATION_DEFINED to RGBA_8888 (Tegra gralloc allocates
     // RGBA for non-YUV formats). Keep YCbCr_420_888 and BLOB as-is.
